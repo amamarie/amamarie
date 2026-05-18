@@ -26,7 +26,9 @@ export default async function ClientPortalSectionPage({ params, searchParams }: 
 
   const resolvedSearchParams = await searchParams
   const clientId = Array.isArray(resolvedSearchParams?.clientId) ? resolvedSearchParams.clientId[0] : resolvedSearchParams?.clientId
-  const { user, client, isPreview } = await getClientPortalContext(clientId)
+  const section = resolvedParams?.section ?? ""
+  const redirectPath = clientId ? `/espace-client/${section}?clientId=${encodeURIComponent(clientId)}` : `/espace-client/${section}`
+  const { user, client, isPreview } = await getClientPortalContext(clientId, redirectPath)
 
   if (!client) {
     const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : ""

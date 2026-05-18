@@ -11,7 +11,8 @@ type ClientSpacePageProps = {
 export default async function ClientSpacePage({ searchParams }: ClientSpacePageProps) {
   const params = await searchParams
   const clientId = Array.isArray(params?.clientId) ? params.clientId[0] : params?.clientId
-  const { user, client, isPreview } = await getClientPortalContext(clientId)
+  const redirectPath = clientId ? `/espace-client?clientId=${encodeURIComponent(clientId)}` : "/espace-client"
+  const { user, client, isPreview } = await getClientPortalContext(clientId, redirectPath)
 
   if (!client) {
     const steps = [
