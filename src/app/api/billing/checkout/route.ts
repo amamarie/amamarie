@@ -9,6 +9,7 @@ import {
 } from "@/lib/billing/plans"
 import {
   normalizeBillingInterval,
+  stripePriceLookupKey,
   stripePlanAmountCents,
   stripePlanLabel,
   stripePlanMetadata,
@@ -30,6 +31,15 @@ type StripeCustomer = {
 type StripeCheckoutSession = {
   id: string
   url: string | null
+}
+
+type StripePrice = {
+  id: string
+  active: boolean
+}
+
+type StripeList<T> = {
+  data: T[]
 }
 
 function appUrl() {
@@ -68,6 +78,26 @@ async function getOrCreateStripeCustomer({
   })
 
   return customer.id
+}
+
+async function getStripeCatalogPriceId({
+  plan,
+  pricingMode,
+  currency,
+  interval,
+}: {
+  plan: ReturnType<typeof normalizeSubscriptionPlan>
+  pricingMode: ReturnType<typeof normalizeSubscriptionPricingMode>
+  currency: ReturnType<typeof normalizeSubscriptionCurrency>
+  interval: ReturnType<typeof normalizeBillingInterval>
+}) {
+  const lookupKey = stripePriceLookupKey({ plan, pricingMode, currency, interval })
+  const response = await stripeRequest<StripeList<StripePrice>>(
+    `/prices?active=true&limit=1&lookup_keys[]=${encodeURIComponent(lookupKey)}`,
+    undefined,
+    { method: "GET" },
+  )
+  return response.data[0]?.id ?? null
 }
 
 export async function POST(request: Request) {
@@ -115,12 +145,18 @@ export async function POST(request: Request) {
     params.set("cancel_url", `${baseUrl}/forfaits?billing=stripe-cancelled`)
     params.set("allow_promotion_codes", "true")
     params.set("line_items[0][quantity]", "1")
-    params.set("line_items[0][price_data][currency]", currency.toLowerCase())
-    params.set("line_items[0][price_data][unit_amount]", String(stripePlanAmountCents({ plan, pricingMode, currency, interval })))
-    params.set("line_items[0][price_data][recurring][interval]", interval === "annual" ? "year" : "month")
-    params.set("line_items[0][price_data][product_data][name]", stripePlanLabel(plan, interval))
-    params.set("line_items[0][price_data][product_data][metadata][plan]", plan)
-    params.set("line_items[0][price_data][product_data][metadata][pricingMode]", pricingMode)
+
+    const catalogPriceId = await getStripeCatalogPriceId({ plan, pricingMode, currency, interval }).catch(() => null)
+    if (catalogPriceId) {
+      params.set("line_items[0][price]", catalogPriceId)
+    } else {
+      params.set("line_items[0][price_data][currency]", currency.toLowerCase())
+      params.set("line_items[0][price_data][unit_amount]", String(stripePlanAmountCents({ plan, pricingMode, currency, interval })))
+      params.set("line_items[0][price_data][recurring][interval]", interval === "annual" ? "year" : "month")
+      params.set("line_items[0][price_data][product_data][name]", stripePlanLabel(plan, interval))
+      params.set("line_items[0][price_data][product_data][metadata][plan]", plan)
+      params.set("line_items[0][price_data][product_data][metadata][pricingMode]", pricingMode)
+    }
     appendMetadata(params, "metadata", metadata)
     appendMetadata(params, "subscription_data[metadata]", metadata)
 

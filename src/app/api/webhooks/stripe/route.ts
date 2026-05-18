@@ -32,6 +32,17 @@ function dateFromUnix(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? new Date(value * 1000) : null
 }
 
+function subscriptionPriceId(object: Record<string, unknown>) {
+  const defaultPriceId = stringValue(object.default_price)
+  if (defaultPriceId) return defaultPriceId
+
+  const items = object.items && typeof object.items === "object" ? object.items as Record<string, unknown> : null
+  const data = Array.isArray(items?.data) ? items.data : []
+  const firstItem = data[0] && typeof data[0] === "object" ? data[0] as Record<string, unknown> : null
+  const price = firstItem?.price && typeof firstItem.price === "object" ? firstItem.price as Record<string, unknown> : null
+  return stringValue(price?.id)
+}
+
 function stripeObjectMetadata(object: Record<string, unknown>) {
   return object as Prisma.InputJsonValue
 }
@@ -93,7 +104,7 @@ async function activateSubscription(object: Record<string, unknown>) {
       stripeCustomerId: customerId ?? organization.stripeCustomerId,
       stripeSubscriptionId: subscriptionId ?? organization.stripeSubscriptionId,
       stripeSubscriptionStatus: status ?? organization.stripeSubscriptionStatus,
-      stripePriceId: stringValue(object.default_price) ?? organization.stripePriceId,
+      stripePriceId: subscriptionPriceId(object) ?? organization.stripePriceId,
       stripeCurrentPeriodEnd: dateFromUnix(object.current_period_end) ?? organization.stripeCurrentPeriodEnd,
       stripeCancelAtPeriodEnd: boolValue(object.cancel_at_period_end),
       organizationType: organizationTypeForSubscriptionPlan(plan),

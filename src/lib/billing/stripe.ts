@@ -63,3 +63,23 @@ export function stripePlanMetadata(input: {
 export function stripePlanLabel(plan: SubscriptionPlanKey, interval: BillingInterval) {
   return `FinAdvisor ${subscriptionPlans[plan].label} (${interval === "annual" ? "annuel" : "mensuel"})`
 }
+
+export function stripePriceLookupKey({
+  plan,
+  pricingMode,
+  currency,
+  interval,
+}: {
+  plan: SubscriptionPlanKey
+  pricingMode: SubscriptionPricingModeKey
+  currency: SubscriptionCurrencyKey
+  interval: BillingInterval
+}) {
+  return [
+    "finadvisor",
+    pricingMode,
+    plan.toLowerCase(),
+    currency.toLowerCase(),
+    interval,
+  ].join("_")
+}
