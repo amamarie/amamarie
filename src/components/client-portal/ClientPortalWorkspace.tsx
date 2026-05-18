@@ -1235,7 +1235,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           />
 
           <div className="min-w-0 space-y-6">
-            <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
+            <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" || activePage === "profil" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
           <div className={activePage === "overview" ? "hidden" : "space-y-5"}>
             <Panel id="portal-profile-questionnaire" className={`xl:col-span-2 ${showOnPage("profil")}`} title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
               <div className={profileMissingItems.length > 0 ? "mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" : "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"}>
