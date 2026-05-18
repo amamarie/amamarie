@@ -1,0 +1,5 @@
+CREATE TYPE "ClientProfileType" AS ENUM ('INDIVIDUAL', 'BUSINESS', 'TRUST', 'ESTATE', 'HOUSEHOLD', 'NON_PROFIT', 'OTHER');
+
+ALTER TABLE "Client" ADD COLUMN "profileType" "ClientProfileType" NOT NULL DEFAULT 'INDIVIDUAL';
+
+ALTER TABLE "ClientKycProfile" ADD COLUMN "subjectType" "ClientProfileType" NOT NULL DEFAULT 'INDIVIDUAL';

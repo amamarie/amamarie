@@ -1,0 +1,2 @@
+ALTER INDEX IF EXISTS "AdvisorAvailabilitySlot_organizationId_advisorId_dayOfWeek_star"
+  RENAME TO "AdvisorAvailabilitySlot_organizationId_advisorId_dayOfWeek__key";

@@ -1,0 +1,288 @@
+{
+  "name": "FinAdvisor CRM - Automatisations internes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "e3838698-8979-4155-add0-9c1aa4fe7c8a/finadvisor/:workflowKey",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "finadvisor-webhook",
+      "name": "Webhook FinAdvisor",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-760, 0],
+      "webhookId": "e3838698-8979-4155-add0-9c1aa4fe7c8a"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "Premier suivi prospect",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "lead-created-follow-up",
+                    "leftValue": "={{ $json.params.workflowKey }}",
+                    "rightValue": "lead.created.follow_up",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Onboarding client",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "client-created-onboarding",
+                    "leftValue": "={{ $json.params.workflowKey }}",
+                    "rightValue": "client.created.onboarding",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Document requis",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "document-required",
+                    "leftValue": "={{ $json.params.workflowKey }}",
+                    "rightValue": "document.required.request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "switch-workflow-key",
+      "name": "Router par automatisation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.callback.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.body.callback.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"create_task\",\n  \"organizationId\": \"{{ $json.body.organizationId }}\",\n  \"userId\": \"{{ $json.body.userId }}\",\n  \"leadId\": \"{{ $json.body.leadId }}\",\n  \"automationRuleId\": \"{{ $json.body.automationRuleId }}\",\n  \"workflowKey\": \"{{ $json.body.workflowKey }}\",\n  \"title\": \"Premier suivi prospect\",\n  \"description\": \"Suivi automatique pour {{ $json.body.payload.firstName }} {{ $json.body.payload.lastName }}.\",\n  \"priority\": \"NORMAL\",\n  \"dueInHours\": 24\n}",
+        "options": {}
+      },
+      "id": "callback-lead-task",
+      "name": "Créer/valider tâche prospect dans FinAdvisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, -180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.callback.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.body.callback.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"create_task\",\n  \"organizationId\": \"{{ $json.body.organizationId }}\",\n  \"userId\": \"{{ $json.body.userId }}\",\n  \"clientId\": \"{{ $json.body.clientId }}\",\n  \"automationRuleId\": \"{{ $json.body.automationRuleId }}\",\n  \"workflowKey\": \"{{ $json.body.workflowKey }}\",\n  \"title\": \"Compléter dossier client\",\n  \"description\": \"Démarrage automatique du dossier client.\",\n  \"priority\": \"HIGH\",\n  \"dueInHours\": 24\n}",
+        "options": {}
+      },
+      "id": "callback-client-task",
+      "name": "Créer/valider tâche onboarding dans FinAdvisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.body.callback.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.body.callback.token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"create_task\",\n  \"organizationId\": \"{{ $json.body.organizationId }}\",\n  \"userId\": \"{{ $json.body.userId }}\",\n  \"leadId\": \"{{ $json.body.leadId }}\",\n  \"clientId\": \"{{ $json.body.clientId }}\",\n  \"automationRuleId\": \"{{ $json.body.automationRuleId }}\",\n  \"workflowKey\": \"{{ $json.body.workflowKey }}\",\n  \"title\": \"Demander document\",\n  \"description\": \"Document requis: {{ $json.body.payload.documentName || 'Document client' }}.\",\n  \"priority\": \"HIGH\",\n  \"dueInHours\": 24\n}",
+        "options": {}
+      },
+      "id": "callback-document-task",
+      "name": "Créer/valider tâche document dans FinAdvisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"workflowKey\": \"{{ $('Webhook FinAdvisor').item.json.params.workflowKey }}\",\n  \"message\": \"Automatisation FinAdvisor reçue\"\n}",
+        "options": {}
+      },
+      "id": "response-ok",
+      "name": "Réponse FinAdvisor",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [80, 0]
+    }
+  ],
+  "connections": {
+    "Webhook FinAdvisor": {
+      "main": [
+        [
+          {
+            "node": "Router par automatisation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router par automatisation": {
+      "main": [
+        [
+          {
+            "node": "Créer/valider tâche prospect dans FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Créer/valider tâche onboarding dans FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Créer/valider tâche document dans FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer/valider tâche prospect dans FinAdvisor": {
+      "main": [
+        [
+          {
+            "node": "Réponse FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer/valider tâche onboarding dans FinAdvisor": {
+      "main": [
+        [
+          {
+            "node": "Réponse FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer/valider tâche document dans FinAdvisor": {
+      "main": [
+        [
+          {
+            "node": "Réponse FinAdvisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "finadvisor-automations-v1",
+  "id": "finadvisor-automations"
+}
