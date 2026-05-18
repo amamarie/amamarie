@@ -9,6 +9,15 @@ import {
 import { isInternalAuthEnabled } from "@/lib/auth-config"
 import { normalizeSubscriptionCurrency, normalizeSubscriptionPlan, normalizeSubscriptionPricingMode } from "@/lib/billing/plans"
 
+function authEmailErrorMessage(message: string) {
+  if (message === "EMAIL_INVALID_API_KEY") return "La clé Resend configurée est invalide. Créez une nouvelle clé API Resend et mettez à jour RESEND_API_KEY."
+  if (message === "EMAIL_DOMAIN_NOT_VERIFIED") return "Le domaine expéditeur n’est pas vérifié dans Resend. Vérifiez finassuro.com ou utilisez un expéditeur validé."
+  if (message === "EMAIL_INVALID_FROM") return "L’expéditeur EMAIL_FROM est invalide. Utilisez un format comme FinAssuro <noreply@finassuro.com>."
+  if (message === "EMAIL_NOT_CONFIGURED") return "Aucun fournisseur courriel n’est configuré. Ajoutez RESEND_API_KEY et EMAIL_FROM ou connectez Gmail."
+  if (message.startsWith("EMAIL_SEND_FAILED:")) return "Connexion validée, mais le fournisseur courriel a refusé l’envoi du code."
+  return null
+}
+
 export async function POST(request: Request) {
   if (!isInternalAuthEnabled()) {
     return NextResponse.json(
@@ -63,16 +72,14 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connexion impossible."
-    const isEmailError = message === "EMAIL_NOT_CONFIGURED" || message.startsWith("EMAIL_SEND_FAILED:")
+    const emailError = authEmailErrorMessage(message)
 
     return NextResponse.json(
       {
         ok: false,
-        error: isEmailError
-          ? "Connexion validée, mais l’envoi du code de vérification a échoué. Vérifiez la configuration courriel."
-          : message,
+        error: emailError ?? message,
       },
-      { status: isEmailError ? 503 : 400 }
+      { status: emailError ? 503 : 400 }
     )
   }
 }

@@ -5,6 +5,7 @@ import type { User, UserRole } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
 import { sendTransactionalEmail } from "@/lib/email/send"
+import { sendAdvisorGmailEmail } from "@/lib/google/gmail"
 import {
   normalizeSaasAppRole,
   organizationNameForAppRole,
@@ -65,6 +66,12 @@ type TwoFactorChallengeInput = {
   role?: SaasAppRole
 }
 
+type InternalAuthEmailInput = {
+  subject: string
+  text: string
+  html?: string
+}
+
 function authSecret() {
   const value = process.env.INTERNAL_AUTH_SECRET
 
@@ -109,6 +116,26 @@ function maskEmail(email: string) {
   if (!name || !domain) return email
   const visible = name.slice(0, Math.min(2, name.length))
   return `${visible}${"*".repeat(Math.max(2, name.length - visible.length))}@${domain}`
+}
+
+async function sendInternalAuthEmail(user: Pick<User, "id" | "organizationId" | "email">, input: InternalAuthEmailInput) {
+  const gmailResult = await sendAdvisorGmailEmail({
+    organizationId: user.organizationId,
+    userId: user.id,
+    to: user.email,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
+  }).catch(() => null)
+
+  if (gmailResult) return gmailResult
+
+  return sendTransactionalEmail({
+    to: user.email,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
+  })
 }
 
 function verifySessionValue(value: string): InternalSessionPayload | null {
@@ -256,8 +283,7 @@ export async function requestInternalPasswordReset({ email: rawEmail, role }: Pa
     },
   })
 
-  await sendTransactionalEmail({
-    to: email,
+  await sendInternalAuthEmail(user, {
     subject: "Réinitialisation de votre mot de passe FinAssuro",
     text: [
       "Bonjour,",
@@ -376,8 +402,7 @@ export async function startInternalTwoFactorChallenge(user: User) {
     },
   })
 
-  await sendTransactionalEmail({
-    to: user.email,
+  await sendInternalAuthEmail(user, {
     subject: "Code de connexion FinAssuro",
     text: [
       "Bonjour,",

@@ -7,6 +7,15 @@ import {
 } from "@/lib/auth/internal"
 import { isInternalAuthEnabled } from "@/lib/auth-config"
 
+function resetEmailErrorMessage(message: string) {
+  if (message === "EMAIL_INVALID_API_KEY") return "La clé Resend configurée est invalide. Créez une nouvelle clé API Resend et mettez à jour RESEND_API_KEY."
+  if (message === "EMAIL_DOMAIN_NOT_VERIFIED") return "Le domaine expéditeur n’est pas vérifié dans Resend. Vérifiez finassuro.com ou utilisez un expéditeur validé."
+  if (message === "EMAIL_INVALID_FROM") return "L’expéditeur EMAIL_FROM est invalide. Utilisez un format comme FinAssuro <noreply@finassuro.com>."
+  if (message === "EMAIL_NOT_CONFIGURED") return "Aucun fournisseur courriel n’est configuré. Ajoutez RESEND_API_KEY et EMAIL_FROM ou connectez Gmail."
+  if (message.startsWith("EMAIL_SEND_FAILED:")) return "Le fournisseur courriel a refusé l’envoi du lien de réinitialisation."
+  return null
+}
+
 export async function POST(request: Request) {
   if (!isInternalAuthEnabled()) {
     return NextResponse.json(
@@ -39,15 +48,13 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Réinitialisation impossible."
-    const isEmailError = message === "EMAIL_NOT_CONFIGURED" || message.startsWith("EMAIL_SEND_FAILED:")
-    const status = isEmailError ? 503 : 400
+    const emailError = resetEmailErrorMessage(message)
+    const status = emailError ? 503 : 400
 
     return NextResponse.json(
       {
         ok: false,
-        error: isEmailError
-          ? "L’envoi du courriel de réinitialisation a échoué. Vérifiez RESEND_API_KEY et EMAIL_FROM."
-          : message,
+        error: emailError ?? message,
       },
       { status }
     )

@@ -9,6 +9,16 @@ type SendTransactionalEmailInput = {
   html?: string
 }
 
+function resendErrorCode(status: number, body: string) {
+  const lower = body.toLowerCase()
+
+  if (status === 401 || lower.includes("api key is invalid")) return "EMAIL_INVALID_API_KEY"
+  if (lower.includes("domain") && (lower.includes("not verified") || lower.includes("verify"))) return "EMAIL_DOMAIN_NOT_VERIFIED"
+  if (lower.includes("from") && lower.includes("invalid")) return "EMAIL_INVALID_FROM"
+
+  return `EMAIL_SEND_FAILED:${status}:${body.slice(0, 180)}`
+}
+
 export function isResendConfigured(apiKey = process.env.RESEND_API_KEY) {
   const value = apiKey?.trim()
   if (!value) return false
@@ -45,7 +55,7 @@ export async function sendTransactionalEmail({ to, from: customFrom, replyTo, cc
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "")
-    throw new Error(`EMAIL_SEND_FAILED:${response.status}:${errorBody.slice(0, 180)}`)
+    throw new Error(resendErrorCode(response.status, errorBody))
   }
 
   return response.json() as Promise<{ id?: string }>
