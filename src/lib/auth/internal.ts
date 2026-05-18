@@ -496,6 +496,12 @@ function clientIdFromRedirectUrl(redirectUrl?: string) {
   }
 }
 
+function canCreateWorkspaceUser(appRole: SaasAppRole) {
+  if (appRole === "advisor") return true
+  if (appRole === "developer") return process.env.INTERNAL_AUTH_ALLOW_DEVELOPER_SIGNUP === "true"
+  return process.env.INTERNAL_AUTH_ALLOW_SIGNUP === "true"
+}
+
 async function createClientPortalUser(email: string, password: string, name?: string, redirectUrl?: string) {
   const client = await findClientForPortalSignup(email, redirectUrl)
 
@@ -547,8 +553,12 @@ async function createWorkspaceUser(
   subscriptionPricingMode?: SubscriptionPricingModeKey,
   subscriptionCurrency?: SubscriptionCurrencyKey
 ) {
-  if (process.env.INTERNAL_AUTH_ALLOW_SIGNUP !== "true") {
-    throw new Error("La création libre d’un accès conseiller est désactivée. Utilise un utilisateur existant ou active INTERNAL_AUTH_ALLOW_SIGNUP.")
+  if (!canCreateWorkspaceUser(appRole)) {
+    throw new Error(
+      appRole === "developer"
+        ? "La création libre d’un accès développeur est désactivée."
+        : "La création libre de cet accès est désactivée."
+    )
   }
 
   const passwordPayload = await hashInternalPassword(password)
