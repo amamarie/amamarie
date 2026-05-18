@@ -48,7 +48,7 @@ export function buildClientPortalSignUpUrl({ origin, email, clientId }: { origin
   const url = new URL("/sign-up", appOrigin(origin))
   url.searchParams.set("role", "client")
   url.searchParams.set("email", email)
-  url.searchParams.set("redirect_url", `/espace-client?clientId=${clientId}#portal-profile-questionnaire`)
+  url.searchParams.set("redirect_url", `/espace-client/profil?clientId=${clientId}`)
   return url.toString()
 }
 

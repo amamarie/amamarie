@@ -3,6 +3,7 @@
 import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from "react"
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   CalendarDays,
@@ -34,12 +35,24 @@ import { Input } from "@/components/ui/input"
 
 type PortalNavItem = {
   id: string
+  page: ClientPortalPage
   icon: LucideIcon
   title: string
   detail: string
   count: string
   tone: "emerald" | "amber" | "sky" | "violet" | "slate"
 }
+
+export type ClientPortalPage =
+  | "overview"
+  | "profil"
+  | "consentements"
+  | "messages"
+  | "documents"
+  | "analyses"
+  | "recommandations"
+  | "conseiller"
+  | "historique"
 
 type PortalClient = {
   id: string
@@ -184,6 +197,7 @@ type ClientPortalWorkspaceProps = {
   userEmail: string
   client: PortalClient
   isPreview?: boolean
+  activePage?: ClientPortalPage
 }
 
 const documentTypeOptions = [
@@ -484,7 +498,7 @@ async function copyToClipboard(value: string) {
   document.body.removeChild(textarea)
 }
 
-export function ClientPortalWorkspace({ userName, userEmail, client, isPreview = false }: ClientPortalWorkspaceProps) {
+export function ClientPortalWorkspace({ userName, userEmail, client, isPreview = false, activePage = "overview" }: ClientPortalWorkspaceProps) {
   const router = useRouter()
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -540,9 +554,15 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
   ]
   const profileMissingItems = profileRequiredItems.filter((item) => !item.done)
   const profileCompletion = Math.round(((profileRequiredItems.length - profileMissingItems.length) / profileRequiredItems.length) * 100)
+  const portalHref = (page: ClientPortalPage) => {
+    const query = `clientId=${encodeURIComponent(client.id)}`
+    return page === "overview" ? `/espace-client?${query}` : `/espace-client/${page}?${query}`
+  }
+  const showOnPage = (...pages: ClientPortalPage[]) => pages.includes(activePage) ? "" : "hidden"
   const dossierFolders = [
     {
       id: "portal-profile-questionnaire",
+      page: "profil",
       icon: UserRoundCheck,
       title: "Profil client sécurisé",
       detail: client.kycCompleted ? "Profil soumis au conseiller" : "Questionnaire guidé à compléter",
@@ -551,6 +571,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-consents",
+      page: "consentements",
       icon: ShieldCheck,
       title: "Consentements",
       detail: client.consentGiven || activeConsents.length > 0 ? "Profil confirmé" : "Confirmation requise",
@@ -559,6 +580,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-documents",
+      page: "documents",
       icon: FileText,
       title: "Documents",
       detail: requiredDocuments.length > 0 ? `${requiredDocuments.length} document${requiredDocuments.length > 1 ? "s" : ""} à fournir` : "Documents classés",
@@ -567,6 +589,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-analyses",
+      page: "analyses",
       icon: HeartPulse,
       title: "Analyses d’assurance",
       detail: reportsAvailable > 0 ? `${reportsAvailable} rapport${reportsAvailable > 1 ? "s" : ""} disponible${reportsAvailable > 1 ? "s" : ""}` : "En préparation",
@@ -575,6 +598,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-message",
+      page: "messages",
       icon: MessageSquareText,
       title: "Messages",
       detail: "Échanger avec le conseiller",
@@ -583,6 +607,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-advisor",
+      page: "conseiller",
       icon: UserRoundCheck,
       title: "Conseiller",
       detail: client.advisor?.name ?? "Conseiller à assigner",
@@ -591,6 +616,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
     {
       id: "portal-history",
+      page: "historique",
       icon: Clock3,
       title: "Historique",
       detail: "Activités récentes",
@@ -599,11 +625,21 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     },
   ] satisfies PortalNavItem[]
   const portalNavItems = [
+    {
+      id: "portal-overview",
+      page: "overview",
+      icon: CalendarDays,
+      title: "Vue d’ensemble",
+      detail: "Priorités du dossier",
+      count: `${completion} %`,
+      tone: "emerald",
+    },
     dossierFolders[0],
     dossierFolders[1],
     dossierFolders[4],
     {
       id: "portal-upload",
+      page: "documents",
       icon: UploadCloud,
       title: "Téléverser",
       detail: requiredDocuments.length > 0 ? "Répondre aux demandes" : "Ajouter un fichier",
@@ -614,6 +650,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     dossierFolders[3],
     {
       id: "portal-recommendations",
+      page: "recommandations",
       icon: FileCheck2,
       title: "Recommandations",
       detail: client.productRecommendations.length > 0 ? "Rapports et décisions" : "Aucune en attente",
@@ -629,10 +666,6 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
   }, [client.advisor?.name])
   const greetingName = isPreview ? `${client.firstName} ${client.lastName}` : userName || `${client.firstName} ${client.lastName}`
-
-  function scrollToSection(sectionId: string) {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }
 
   async function copyPortalLink() {
     setIsCopyingPortalLink(true)
@@ -1048,22 +1081,23 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
         <div className="mt-6 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <PortalSidebar
             items={portalNavItems}
+            activePage={activePage}
+            getHref={portalHref}
             completion={completion}
             nextAction={nextAction}
             isPreview={isPreview}
             clientId={client.id}
             isCopyingPortalLink={isCopyingPortalLink}
             isSendingInvitation={isSendingInvitation}
-            onOpen={scrollToSection}
             onRefresh={() => router.refresh()}
             onCopyPortalLink={copyPortalLink}
             onResendPortalInvitation={resendPortalInvitation}
           />
 
           <div className="min-w-0 space-y-6">
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="space-y-5">
-            <Panel id="portal-profile-questionnaire" title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
+            <section className={activePage === "overview" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
+          <div className={activePage === "overview" ? "hidden" : "space-y-5"}>
+            <Panel id="portal-profile-questionnaire" className={`xl:col-span-2 ${showOnPage("profil")}`} title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
               <div className={profileMissingItems.length > 0 ? "mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" : "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -1186,7 +1220,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </form>
             </Panel>
 
-            <Panel id="portal-consents" title="Confirmer mon profil client" description="Cette acceptation horodatée fige une version du dossier pour la révision du conseiller.">
+            <Panel id="portal-consents" className={showOnPage("consentements")} title="Confirmer mon profil client" description="Cette acceptation horodatée fige une version du dossier pour la révision du conseiller.">
               <div className="grid gap-3 sm:grid-cols-2">
                 <SummaryItem label="Nom" value={`${client.firstName} ${client.lastName}`} />
                 <SummaryItem label="Date de naissance" value={formatDate(client.dateOfBirth)} />
@@ -1271,7 +1305,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </form>
             </Panel>
 
-            <Panel id="portal-message" title="Communiquer avec mon conseiller" description="Le message est ajouté au dossier client et crée une tâche de réponse pour le conseiller.">
+            <Panel id="portal-message" className={showOnPage("messages")} title="Communiquer avec mon conseiller" description="Le message est ajouté au dossier client et crée une tâche de réponse pour le conseiller.">
               <form onSubmit={sendMessage} className="space-y-3">
                 <Input name="subject" placeholder="Sujet du message" defaultValue={requiredDocuments.length > 0 ? "Document ou information à valider" : ""} />
                 <textarea
@@ -1289,7 +1323,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </form>
             </Panel>
 
-            <Panel id="portal-upload" title="Ajouter un document" description="Le fichier est classé automatiquement dans votre dossier client et le conseiller reçoit une notification.">
+            <Panel id="portal-upload" className={showOnPage("documents")} title="Ajouter un document" description="Le fichier est classé automatiquement dans votre dossier client et le conseiller reçoit une notification.">
               <form onSubmit={uploadDocument} className="space-y-3">
                 <Input name="name" placeholder="Nom du document" />
                 {requiredDocuments.length > 0 ? (
@@ -1323,8 +1357,8 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </Panel>
           </div>
 
-          <div className="space-y-5">
-            <Panel title="Demandes et prochaines étapes" description="Les actions ouvertes dans le CRM du conseiller apparaissent ici.">
+          <div className={activePage === "overview" || activePage === "messages" ? "space-y-5" : "hidden"}>
+            <Panel className={showOnPage("overview")} title="Demandes et prochaines étapes" description="Les actions ouvertes dans le CRM du conseiller apparaissent ici.">
               <div className="space-y-3">
                 {openTasks.length === 0 && requiredDocuments.length === 0 ? <EmptyLine text="Aucune action requise pour le moment." /> : null}
                 {requiredDocuments.map((document) => (
@@ -1341,7 +1375,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </div>
             </Panel>
 
-            <Panel title="Messages du dossier" description="Conversations ajoutées depuis le portail client.">
+            <Panel className={showOnPage("overview", "messages")} title="Messages du dossier" description="Conversations ajoutées depuis le portail client.">
               <div className="space-y-3">
                 {client.noteItems.length === 0 ? <EmptyLine text="Aucun message portail pour le moment." /> : null}
                 {client.noteItems.map((note) => (
@@ -1359,8 +1393,8 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </div>
         </section>
 
-            <section className="grid gap-5 xl:grid-cols-3">
-          <Panel id="portal-documents" title="Documents au dossier" description="Documents reçus, demandés ou validés.">
+            <section className={activePage === "overview" ? "grid gap-5 xl:grid-cols-3" : "grid gap-5"}>
+          <Panel id="portal-documents" className={showOnPage("overview", "documents")} title="Documents au dossier" description="Documents reçus, demandés ou validés.">
             <div className="space-y-3">
               {client.documents.length === 0 ? <EmptyLine text="Aucun document visible pour le moment." /> : null}
               {client.documents.map((document) => (
@@ -1376,7 +1410,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
 
-          <Panel id="portal-analyses" title="Votre analyse d’assurance" description="Suivez les analyses préparées par le conseiller et les rapports disponibles dans votre dossier.">
+          <Panel id="portal-analyses" className={showOnPage("analyses")} title="Votre analyse d’assurance" description="Suivez les analyses préparées par le conseiller et les rapports disponibles dans votre dossier.">
             <div className="space-y-3">
               {client.insuranceNeedsAnalyses.length === 0 ? <EmptyLine text="Aucune analyse visible pour le moment." /> : null}
               {client.insuranceNeedsAnalyses.map((analysis) => (
@@ -1456,7 +1490,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
 
-          <Panel id="portal-recommendations" title="Vos recommandations" description="Rapports présentés par votre conseiller, décisions et preuves de signature.">
+          <Panel id="portal-recommendations" className={showOnPage("recommandations")} title="Vos recommandations" description="Rapports présentés par votre conseiller, décisions et preuves de signature.">
             <div className="space-y-3">
               {client.productRecommendations.length === 0 ? <EmptyLine text="Aucune recommandation visible pour le moment." /> : null}
               {client.productRecommendations.map((recommendation) => {
@@ -1529,7 +1563,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
 
-          <Panel id="portal-advisor" title="Conseiller et cabinet" description="Coordonnées liées au dossier.">
+          <Panel id="portal-advisor" className={showOnPage("overview", "conseiller")} title="Conseiller et cabinet" description="Coordonnées liées au dossier.">
             <div className="space-y-3">
               <ListLine icon={UserRoundCheck} title={client.advisor?.name ?? "Conseiller à assigner"} detail={client.organization.name} />
               <ContactLine icon={Mail} title={client.advisor?.email ?? "Courriel non disponible"} detail="Courriel du conseiller" href={client.advisor?.email ? `mailto:${client.advisor.email}` : undefined} />
@@ -1538,7 +1572,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
 
-          <Panel title="Mes consentements et préférences" description="Autorisations, refus et retraits conservés avec preuve au dossier.">
+          <Panel className={showOnPage("consentements")} title="Mes consentements et préférences" description="Autorisations, refus et retraits conservés avec preuve au dossier.">
             <div className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-3">
                 {["ACCESS", "RECTIFICATION", "PORTABILITY"].map((requestType) => (
@@ -1624,7 +1658,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
 
-          <Panel id="portal-history" title="Évolution du dossier" description="Historique récent synchronisé depuis le CRM.">
+          <Panel id="portal-history" className={showOnPage("historique")} title="Évolution du dossier" description="Historique récent synchronisé depuis le CRM.">
             <div className="space-y-3">
               {client.activities.length === 0 ? <EmptyLine text="Aucune activité visible pour le moment." /> : null}
               {client.activities.map((activity) => (
@@ -1642,25 +1676,27 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
 
 function PortalSidebar({
   items,
+  activePage,
+  getHref,
   completion,
   nextAction,
   isPreview,
   clientId,
   isCopyingPortalLink,
   isSendingInvitation,
-  onOpen,
   onRefresh,
   onCopyPortalLink,
   onResendPortalInvitation,
 }: {
   items: PortalNavItem[]
+  activePage: ClientPortalPage
+  getHref: (page: ClientPortalPage) => string
   completion: number
   nextAction: string
   isPreview: boolean
   clientId: string
   isCopyingPortalLink: boolean
   isSendingInvitation: boolean
-  onOpen: (sectionId: string) => void
   onRefresh: () => void
   onCopyPortalLink: () => void
   onResendPortalInvitation: () => void
@@ -1687,7 +1723,7 @@ function PortalSidebar({
 
         <nav className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1" aria-label="Sections du portail client">
           {items.map((item) => (
-            <PortalSidebarItem key={item.id} item={item} onOpen={() => onOpen(item.id)} />
+            <PortalSidebarItem key={`${item.page}-${item.id}`} item={item} href={getHref(item.page)} isActive={item.page === activePage} />
           ))}
         </nav>
 
@@ -1715,13 +1751,17 @@ function PortalSidebar({
               </>
             ) : (
               <>
-                <Button type="button" variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5" onClick={() => onOpen("portal-message")}>
-                  <MessageSquareText className="size-4 shrink-0" />
-                  Écrire au conseiller
+                <Button asChild variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5">
+                  <Link href={getHref("messages")}>
+                    <MessageSquareText className="size-4 shrink-0" />
+                    Écrire au conseiller
+                  </Link>
                 </Button>
-                <Button type="button" variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5" onClick={() => onOpen("portal-upload")}>
-                  <UploadCloud className="size-4 shrink-0" />
-                  Ajouter un document
+                <Button asChild variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5">
+                  <Link href={getHref("documents")}>
+                    <UploadCloud className="size-4 shrink-0" />
+                    Ajouter un document
+                  </Link>
                 </Button>
                 <Button type="button" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-emerald-600 px-3 py-2 text-left text-xs font-black leading-5 text-white hover:bg-emerald-700" onClick={onRefresh}>
                   <RefreshCw className="size-4 shrink-0" />
@@ -1736,7 +1776,7 @@ function PortalSidebar({
   )
 }
 
-function PortalSidebarItem({ item, onOpen }: { item: PortalNavItem; onOpen: () => void }) {
+function PortalSidebarItem({ item, href, isActive }: { item: PortalNavItem; href: string; isActive: boolean }) {
   const Icon = item.icon
   const toneClass = {
     emerald: "text-emerald-700 bg-emerald-50 ring-emerald-100",
@@ -1747,10 +1787,11 @@ function PortalSidebarItem({ item, onOpen }: { item: PortalNavItem; onOpen: () =
   }[item.tone]
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2.5 text-left transition hover:border-emerald-200 hover:bg-emerald-50"
+    <Link
+      href={href}
+      className={isActive
+        ? "group flex min-w-0 items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left shadow-sm ring-1 ring-emerald-100"
+        : "group flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2.5 text-left transition hover:border-emerald-200 hover:bg-emerald-50"}
     >
       <span className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 ${toneClass}`}>
         <Icon className="size-4" aria-hidden="true" />
@@ -1762,7 +1803,7 @@ function PortalSidebarItem({ item, onOpen }: { item: PortalNavItem; onOpen: () =
       <span className="max-w-20 shrink-0 truncate rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-black text-slate-600">
         {item.count}
       </span>
-    </button>
+    </Link>
   )
 }
 
@@ -1867,9 +1908,9 @@ function QuestionnaireTextArea({
   )
 }
 
-function Panel({ id, title, description, children }: { id?: string; title: string; description: string; children: ReactNode }) {
+function Panel({ id, title, description, className, children }: { id?: string; title: string; description: string; className?: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section id={id} className={`scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm ${className ?? ""}`}>
       <h2 className="text-lg font-black tracking-tight text-slate-950">{title}</h2>
       <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
       <div className="mt-4">{children}</div>

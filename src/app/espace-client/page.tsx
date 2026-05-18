@@ -123,5 +123,5 @@ export default async function ClientSpacePage({ searchParams }: ClientSpacePageP
 
   const serializableClient = JSON.parse(JSON.stringify(client))
 
-  return <ClientPortalWorkspace userName={user.name} userEmail={user.email} client={serializableClient} isPreview={isPreview} />
+  return <ClientPortalWorkspace userName={user.name} userEmail={user.email} client={serializableClient} isPreview={isPreview} activePage="overview" />
 }

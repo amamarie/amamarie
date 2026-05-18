@@ -799,7 +799,7 @@ export function ClientDetailApiPage({ clientId }: { clientId: string }) {
       const fallbackUrl = new URL("/sign-up", window.location.origin)
       fallbackUrl.searchParams.set("role", "client")
       fallbackUrl.searchParams.set("email", email)
-      fallbackUrl.searchParams.set("redirect_url", `/espace-client?clientId=${client.id}#portal-profile-questionnaire`)
+      fallbackUrl.searchParams.set("redirect_url", `/espace-client/profil?clientId=${client.id}`)
       window.prompt("Copiez ce lien profil client", fallbackUrl.toString())
     }
   }
@@ -1561,7 +1561,7 @@ function ClientPortalAccessPanel({
             Envoyer formulaire profil client
           </Button>
           <Button variant="outline" className="rounded-full border-2 border-slate-200 bg-white font-black text-slate-800 hover:bg-slate-50" asChild>
-            <Link href={`/espace-client?clientId=${client.id}#portal-profile-questionnaire`}>
+            <Link href={`/espace-client/profil?clientId=${client.id}`}>
               <ExternalLink className="size-4" />
               Aperçu formulaire
             </Link>

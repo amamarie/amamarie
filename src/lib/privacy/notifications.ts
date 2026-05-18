@@ -43,7 +43,7 @@ export async function sendConsentRequestToClient({
   })
   if (!client) return null
   const email = clientEmail(client)
-  const portalUrl = appUrl(`/espace-client?clientId=${client.id}#portal-consents`)
+  const portalUrl = appUrl(`/espace-client/consentements?clientId=${client.id}`)
   const advisorName = client.advisor?.name ?? "votre conseiller"
   const subject = `Consentement requis - ${consent.type}`
   const text = `Bonjour ${client.firstName},

@@ -300,7 +300,7 @@ export async function findClientPortalPreviewRecord(user: User, clientId?: strin
 export async function getClientPortalContext(clientId?: string) {
   const user = await getCurrentUserWithOrg()
   if (!user) {
-    const redirectUrl = clientId ? `/espace-client?clientId=${encodeURIComponent(clientId)}` : "/espace-client"
+    const redirectUrl = clientId ? `/espace-client/profil?clientId=${encodeURIComponent(clientId)}` : "/espace-client"
     redirect(`/sign-in?role=client&redirect_url=${encodeURIComponent(redirectUrl)}`)
   }
 
