@@ -9,6 +9,7 @@ import {
   CalendarDays,
   CheckCircle2,
   CheckSquare,
+  ChevronRight,
   Clock3,
   Copy,
   Download,
@@ -53,6 +54,110 @@ export type ClientPortalPage =
   | "recommandations"
   | "conseiller"
   | "historique"
+
+type ClientPortalPageDetails = {
+  eyebrow: string
+  title: string
+  description: string
+  icon: LucideIcon
+  primaryLabel?: string
+  primaryPage?: ClientPortalPage
+  secondaryLabel?: string
+  secondaryPage?: ClientPortalPage
+}
+
+const clientPortalPageDetails: Record<ClientPortalPage, ClientPortalPageDetails> = {
+  overview: {
+    eyebrow: "Tableau de bord",
+    title: "Vue d’ensemble du dossier",
+    description: "Retrouvez les actions urgentes, les documents à fournir, les messages récents et le conseiller assigné.",
+    icon: CalendarDays,
+    primaryLabel: "Compléter mon profil",
+    primaryPage: "profil",
+    secondaryLabel: "Ajouter un document",
+    secondaryPage: "documents",
+  },
+  profil: {
+    eyebrow: "Profil client",
+    title: "Compléter mon profil sécurisé",
+    description: "Mettez à jour vos informations personnelles, familiales, financières et vos objectifs avant la révision du conseiller.",
+    icon: UserRoundCheck,
+    primaryLabel: "Voir mes consentements",
+    primaryPage: "consentements",
+    secondaryLabel: "Ajouter un document",
+    secondaryPage: "documents",
+  },
+  consentements: {
+    eyebrow: "Confidentialité",
+    title: "Consentements et préférences",
+    description: "Confirmez le profil, gérez les autorisations et gardez une preuve claire de vos préférences de communication.",
+    icon: ShieldCheck,
+    primaryLabel: "Écrire au conseiller",
+    primaryPage: "messages",
+    secondaryLabel: "Voir l’historique",
+    secondaryPage: "historique",
+  },
+  messages: {
+    eyebrow: "Communication",
+    title: "Messages avec le conseiller",
+    description: "Envoyez une question ou une précision. Les échanges restent liés à votre dossier client.",
+    icon: MessageSquareText,
+    primaryLabel: "Ajouter un document",
+    primaryPage: "documents",
+    secondaryLabel: "Voir le conseiller",
+    secondaryPage: "conseiller",
+  },
+  documents: {
+    eyebrow: "Documents",
+    title: "Documents et demandes",
+    description: "Téléversez les pièces demandées et consultez les documents visibles dans votre espace client.",
+    icon: UploadCloud,
+    primaryLabel: "Voir mes analyses",
+    primaryPage: "analyses",
+    secondaryLabel: "Écrire au conseiller",
+    secondaryPage: "messages",
+  },
+  analyses: {
+    eyebrow: "Assurance",
+    title: "Analyses d’assurance",
+    description: "Consultez les analyses préparées, les rapports remis et confirmez la réception lorsque requis.",
+    icon: HeartPulse,
+    primaryLabel: "Voir les recommandations",
+    primaryPage: "recommandations",
+    secondaryLabel: "Documents",
+    secondaryPage: "documents",
+  },
+  recommandations: {
+    eyebrow: "Conseil",
+    title: "Recommandations et rapports",
+    description: "Suivez les recommandations présentées, les décisions documentées et les preuves de signature.",
+    icon: FileCheck2,
+    primaryLabel: "Écrire au conseiller",
+    primaryPage: "messages",
+    secondaryLabel: "Historique",
+    secondaryPage: "historique",
+  },
+  conseiller: {
+    eyebrow: "Contact",
+    title: "Conseiller et cabinet",
+    description: "Retrouvez les coordonnées du conseiller, du cabinet et les informations de contact liées au dossier.",
+    icon: UserRoundCheck,
+    primaryLabel: "Écrire au conseiller",
+    primaryPage: "messages",
+    secondaryLabel: "Retour au dossier",
+    secondaryPage: "overview",
+  },
+  historique: {
+    eyebrow: "Suivi",
+    title: "Historique du dossier",
+    description: "Consultez les événements récents synchronisés depuis le CRM et les suivis effectués.",
+    icon: Clock3,
+    primaryLabel: "Écrire au conseiller",
+    primaryPage: "messages",
+    secondaryLabel: "Vue d’ensemble",
+    secondaryPage: "overview",
+  },
+}
 
 type PortalClient = {
   id: string
@@ -558,6 +663,9 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     const query = `clientId=${encodeURIComponent(client.id)}`
     return page === "overview" ? `/espace-client?${query}` : `/espace-client/${page}?${query}`
   }
+  const activePageDetails = clientPortalPageDetails[activePage]
+  const ActivePageIcon = activePageDetails.icon
+  const hasPrimaryWorkArea = ["overview", "profil", "consentements", "messages", "documents"].includes(activePage)
   const showOnPage = (...pages: ClientPortalPage[]) => pages.includes(activePage) ? "" : "hidden"
   const dossierFolders = [
     {
@@ -1034,26 +1142,43 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
         ) : null}
 
         <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-5 bg-slate-950 p-5 text-white lg:grid-cols-[1fr_360px]">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-200">Portail client</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Bonjour {greetingName}</h1>
-              <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
-                Votre dossier est relié au CRM de votre conseiller. Vous pouvez transmettre des informations, ajouter des documents et suivre les étapes sans accéder à l’interface interne du cabinet.
-              </p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <HeroInfo icon={Mail} label="Courriel lié" value={client.emailPrimary ?? client.email ?? userEmail} />
-                <HeroInfo icon={UserRoundCheck} label="Conseiller" value={client.advisor?.name ?? "À assigner"} />
-                <HeroInfo icon={Phone} label="Téléphone conseiller" value={formatPhone(advisorPhone)} />
+          <div className="grid gap-5 bg-slate-950 p-5 text-white lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide text-emerald-200">
+                <Link href={portalHref("overview")} className="transition hover:text-white">Espace client</Link>
+                <ChevronRight className="size-3.5" aria-hidden="true" />
+                <span>{activePageDetails.eyebrow}</span>
+              </div>
+              <div className="mt-4 flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white text-emerald-700 ring-1 ring-white/20">
+                  <ActivePageIcon className="size-6" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-300">Bonjour {greetingName}</p>
+                  <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">{activePageDetails.title}</h1>
+                  <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">{activePageDetails.description}</p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {activePageDetails.primaryLabel && activePageDetails.primaryPage ? (
+                  <Button asChild className="h-auto min-h-10 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950 hover:bg-emerald-400">
+                    <Link href={portalHref(activePageDetails.primaryPage)}>{activePageDetails.primaryLabel}</Link>
+                  </Button>
+                ) : null}
+                {activePageDetails.secondaryLabel && activePageDetails.secondaryPage ? (
+                  <Button asChild variant="outline" className="h-auto min-h-10 rounded-xl border-white/20 bg-white/10 px-4 py-2 text-sm font-black text-white hover:bg-white/15">
+                    <Link href={portalHref(activePageDetails.secondaryPage)}>{activePageDetails.secondaryLabel}</Link>
+                  </Button>
+                ) : null}
               </div>
             </div>
             <div className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-4xl font-black">{completion} %</p>
                   <p className="text-sm font-bold text-slate-300">Progression du dossier</p>
                 </div>
-                <span className="grid size-14 place-items-center rounded-full bg-white text-lg font-black text-emerald-700">{advisorInitials}</span>
+                <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-emerald-700">{advisorInitials}</span>
               </div>
               <div className="mt-4 h-4 overflow-hidden rounded-full bg-white/20">
                 <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.max(6, completion)}%` }} />
@@ -1065,18 +1190,33 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </div>
         </section>
 
-        <section className="mt-5 grid gap-4 lg:grid-cols-6">
-          {completionItems.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-black uppercase text-slate-400">{item.label}</p>
-                {item.done ? <CheckCircle2 className="size-4 text-emerald-600" /> : <Clock3 className="size-4 text-amber-500" />}
-              </div>
-              <p className="mt-2 text-sm font-black text-slate-950">{item.done ? "À jour" : "À faire"}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{item.detail}</p>
-            </div>
-          ))}
-        </section>
+        {activePage === "overview" ? (
+          <>
+            <section className="mt-5 grid gap-4 lg:grid-cols-6">
+              {completionItems.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-black uppercase text-slate-400">{item.label}</p>
+                    {item.done ? <CheckCircle2 className="size-4 text-emerald-600" /> : <Clock3 className="size-4 text-amber-500" />}
+                  </div>
+                  <p className="mt-2 text-sm font-black text-slate-950">{item.done ? "À jour" : "À faire"}</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{item.detail}</p>
+                </div>
+              ))}
+            </section>
+            <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {dossierFolders.slice(0, 4).map((folder) => (
+                <DossierFolderCard key={folder.id} folder={folder} href={portalHref(folder.page)} />
+              ))}
+            </section>
+          </>
+        ) : (
+          <section className="mt-5 grid gap-4 md:grid-cols-3">
+            <PageSignalCard icon={CheckCircle2} label="Dossier" value={`${completion} % complété`} detail="Synchronisé avec le conseiller" />
+            <PageSignalCard icon={Clock3} label="À traiter" value={`${openTasks.length + requiredDocuments.length} action${openTasks.length + requiredDocuments.length > 1 ? "s" : ""}`} detail={nextAction} />
+            <PageSignalCard icon={Mail} label="Conseiller" value={client.advisor?.name ?? "À assigner"} detail={client.advisor?.email ?? client.organization.name} />
+          </section>
+        )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <PortalSidebar
@@ -1095,7 +1235,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           />
 
           <div className="min-w-0 space-y-6">
-            <section className={activePage === "overview" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
+            <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
           <div className={activePage === "overview" ? "hidden" : "space-y-5"}>
             <Panel id="portal-profile-questionnaire" className={`xl:col-span-2 ${showOnPage("profil")}`} title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
               <div className={profileMissingItems.length > 0 ? "mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" : "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"}>
@@ -1819,6 +1959,21 @@ function HeroInfo({ icon: Icon, label, value }: { icon: typeof Mail; label: stri
   )
 }
 
+function PageSignalCard({ icon: Icon, label, value, detail }: { icon: LucideIcon; label: string; value: string; detail: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+        <Icon className="size-5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">{label}</p>
+        <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
+        <p className="mt-1 truncate text-xs font-semibold text-slate-500">{detail}</p>
+      </div>
+    </div>
+  )
+}
+
 function QuestionnaireBlock({ title, detail, children }: { title: string; detail: string; children: ReactNode }) {
   return (
     <section className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
@@ -1920,10 +2075,10 @@ function Panel({ id, title, description, className, children }: { id?: string; t
 
 function DossierFolderCard({
   folder,
-  onOpen,
+  href,
 }: {
   folder: { icon: LucideIcon; title: string; detail: string; count: string; tone: "emerald" | "amber" | "sky" | "violet" | "slate" }
-  onOpen: () => void
+  href: string
 }) {
   const Icon = folder.icon
   const toneClass = {
@@ -1935,9 +2090,8 @@ function DossierFolderCard({
   }[folder.tone]
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <Link
+      href={href}
       className={`group rounded-[1.25rem] border-2 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-[0_8px_0_#e2e8f0] ${toneClass}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -1949,7 +2103,7 @@ function DossierFolderCard({
       <p className="mt-4 text-base font-black">{folder.title}</p>
       <p className="mt-1 text-sm font-semibold leading-5 opacity-80">{folder.detail}</p>
       <p className="mt-3 text-xs font-black uppercase tracking-wide opacity-70 group-hover:opacity-100">Ouvrir</p>
-    </button>
+    </Link>
   )
 }
 
