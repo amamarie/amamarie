@@ -78,23 +78,53 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   if (initialEmail) signOutParams.set("email", initialEmail)
   signOutParams.set("redirect_url", redirectUrl)
   const signOutRedirectUrl = `/sign-in?${signOutParams.toString()}`
+  const isClientAccess = appRole === "client"
+  const pageTitle = isClientAccess ? "Accès sécurisé à votre dossier client" : "Connexion FinAssuro"
+  const pageDescription = isClientAccess
+    ? "Connectez-vous avec le courriel utilisé par votre conseiller. Vous retrouverez vos documents, messages, consentements et prochaines étapes dans un espace séparé du CRM."
+    : `Espace sélectionné: ${selectedChoice.label}. Après connexion, vous serez envoyé vers la bonne plateforme.`
+  const clientBenefits = [
+    "Profil client et consentements",
+    "Documents et demandes ouvertes",
+    "Messages avec le conseiller",
+  ]
 
   return (
-    <main className="grid min-h-screen gap-6 bg-[#f7f9fc] px-4 py-6 text-slate-950 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:px-8">
+    <main className="grid min-h-screen gap-6 bg-[#f7f9fc] px-4 py-6 text-slate-950 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-8">
       <section className="order-2 mx-auto flex w-full max-w-md flex-col justify-center lg:order-1">
         <Link href="/" className="text-sm font-semibold text-slate-500 transition hover:text-slate-950">
           FinAssuro
         </Link>
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight">Connexion SaaS</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          Espace sélectionné: <span className="font-semibold text-slate-950">{selectedChoice.label}</span>. Après connexion, vous serez envoyé vers la bonne plateforme.
-        </p>
-        <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-emerald-950">Lien client reçu?</p>
-          <p className="mt-2 text-sm leading-6 text-emerald-800">
-            Connectez-vous avec le même courriel que celui du dossier. Si vous n’avez pas encore de compte, créez votre accès client.
+        <div className={isClientAccess ? "mt-6 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm" : "mt-6"}>
+          {isClientAccess ? (
+            <div className="bg-slate-950 p-5 text-white">
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-200">Espace client</p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight">{pageTitle}</h1>
+              <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">{pageDescription}</p>
+              <div className="mt-4 grid gap-2">
+                {clientBenefits.map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold text-slate-100 ring-1 ring-white/10">
+                    <ArrowRight className="size-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                    {benefit}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-3xl font-semibold tracking-tight">{pageTitle}</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{pageDescription}</p>
+            </>
+          )}
+        </div>
+        <div className={isClientAccess ? "mt-5 rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4 shadow-sm" : "mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm"}>
+          <p className="text-sm font-black text-emerald-950">{isClientAccess ? "Vous avez reçu un lien client?" : "Lien client reçu?"}</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-emerald-800">
+            {isClientAccess
+              ? "Utilisez exactement le même courriel que celui de votre dossier. Si c’est votre première visite, créez votre accès client."
+              : "Connectez-vous avec le même courriel que celui du dossier. Si vous n’avez pas encore de compte, créez votre accès client."}
           </p>
-          <Link href={signUpUrl} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">
+          <Link href={signUpUrl} className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700">
             Créer l’accès {selectedChoice.label.toLowerCase()}
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
@@ -119,8 +149,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 key={choice.role}
                 href={`/sign-in?${params.toString()}`}
                 className={isSelected
-                  ? "flex gap-3 rounded-lg border border-emerald-200 bg-white px-3 py-3 font-semibold text-slate-900 shadow-sm ring-2 ring-emerald-100"
-                  : "flex gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3 font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"}
+                  ? "flex gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-3 font-semibold text-slate-900 shadow-sm ring-2 ring-emerald-100"
+                  : "flex gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"}
               >
                 <span className={isSelected ? "grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700" : "grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500"}>
                   <Icon className="size-4" aria-hidden="true" />

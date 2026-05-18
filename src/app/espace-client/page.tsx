@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { HeartPulse, Mail, ShieldCheck } from "lucide-react"
+import { CheckCircle2, FileText, HeartPulse, Mail, MessageSquareText, ShieldCheck, UploadCloud } from "lucide-react"
 
 import { ClientPortalWorkspace } from "@/components/client-portal/ClientPortalWorkspace"
 import { getClientPortalContext } from "@/lib/client-portal"
@@ -14,6 +14,17 @@ export default async function ClientSpacePage({ searchParams }: ClientSpacePageP
   const { user, client, isPreview } = await getClientPortalContext(clientId)
 
   if (!client) {
+    const steps = [
+      { icon: Mail, title: "Courriel du dossier", detail: "L’accès doit utiliser le même courriel que la fiche client." },
+      { icon: FileText, title: "Dossier CRM lié", detail: "Le conseiller peut copier ou renvoyer le lien depuis votre dossier." },
+      { icon: ShieldCheck, title: "Accès sécurisé", detail: "Une fois lié, le profil, les documents et consentements apparaissent ici." },
+    ]
+    const availableActions = [
+      { icon: MessageSquareText, title: "Écrire au conseiller", detail: "Les messages seront classés dans le dossier." },
+      { icon: UploadCloud, title: "Ajouter des documents", detail: "Les fichiers seront visibles par le cabinet." },
+      { icon: CheckCircle2, title: "Confirmer les étapes", detail: "Profil, consentements et demandes de suivi." },
+    ]
+
     return (
       <main className="min-h-screen bg-[#f7f9fc] text-slate-950">
         <header className="border-b border-slate-200 bg-white">
@@ -33,48 +44,76 @@ export default async function ClientSpacePage({ searchParams }: ClientSpacePageP
           </div>
         </header>
 
-        <section className="mx-auto grid w-full max-w-6xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
-          <div className="rounded-[2rem] border-2 border-amber-200 bg-white p-6 shadow-[0_10px_0_#fde68a]">
-            <div className="grid size-12 place-items-center rounded-2xl bg-amber-50 text-amber-700">
-              <HeartPulse className="size-6" aria-hidden="true" />
-            </div>
-            <h1 className="mt-5 text-3xl font-black tracking-tight">{isPreview ? "Aucun dossier client trouvé" : "Aucun dossier synchronisé"}</h1>
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
-              {isPreview ? (
-                <>
-                  {clientId
+        <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,0.92fr)_320px] lg:px-8">
+          <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+            <div className="bg-slate-950 p-6 text-white">
+              <div className="grid size-12 place-items-center rounded-2xl bg-white/10 text-emerald-300 ring-1 ring-white/10">
+                <HeartPulse className="size-6" aria-hidden="true" />
+              </div>
+              <p className="mt-5 text-xs font-black uppercase tracking-wide text-emerald-200">
+                {isPreview ? "Aperçu indisponible" : "Dossier à lier"}
+              </p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight">{isPreview ? "Aucun dossier client trouvé" : "Votre espace est prêt, mais aucun dossier n’est encore lié"}</h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-300">
+                {isPreview
+                  ? clientId
                     ? "Le dossier demandé n’est pas accessible avec la session actuellement ouverte."
-                    : "Aucun client actif du cabinet n’est disponible pour afficher l’aperçu de l’espace client."}
-                </>
-              ) : (
-                <>
-                  Votre accès client est actif, mais aucun dossier CRM ne correspond encore à votre courriel <span className="font-black text-slate-950">{user.email}</span>.
-                </>
-              )}
-            </p>
-            <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
-              {isPreview
-                ? clientId
-                  ? `Client demandé: ${clientId}. Vérifiez que le dossier appartient au même cabinet que votre session, ou ouvrez le lien client en navigation privée.`
-                  : "Ouvrez un aperçu précis avec /espace-client?clientId=ID_DU_CLIENT ou utilisez le bouton Copier le lien espace client dans le dossier CRM."
-                : "Demandez à votre conseiller d’utiliser ce même courriel dans votre fiche client. Dès que le courriel correspond, vos documents, messages, tâches et étapes de dossier apparaîtront ici."}
-            </p>
+                    : "Aucun client actif du cabinet n’est disponible pour afficher l’aperçu de l’espace client."
+                  : `Aucun dossier CRM ne correspond encore au courriel ${user.email}.`}
+              </p>
+            </div>
+
+            <div className="grid gap-4 p-5 md:grid-cols-3">
+              {steps.map((step) => {
+                const Icon = step.icon
+                return (
+                  <div key={step.title} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <span className="grid size-10 place-items-center rounded-xl bg-white text-emerald-700 ring-1 ring-slate-100">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <h2 className="mt-3 text-sm font-black text-slate-950">{step.title}</h2>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{step.detail}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="border-t border-slate-100 p-5">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">
+                {isPreview
+                  ? clientId
+                    ? `Client demandé: ${clientId}. Vérifiez que le dossier appartient au même cabinet que votre session, ou ouvrez le lien client en navigation privée.`
+                    : "Ouvrez un aperçu précis depuis un dossier client CRM avec le bouton de lien espace client."
+                  : "Demandez à votre conseiller de vérifier le courriel de votre fiche client ou de vous renvoyer le lien sécurisé du dossier."}
+              </div>
+            </div>
           </div>
 
-          <aside className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-black text-slate-950">Ce que vous pourrez faire ensuite</h2>
-            <div className="mt-4 space-y-3">
-              {[
-                "Voir la progression du profil client, de l’identité, des consentements et des documents.",
-                "Envoyer un message directement dans le dossier CRM du conseiller.",
-                "Téléverser une pièce jointe classée automatiquement au bon dossier.",
-                "Suivre les demandes, tâches ouvertes et dernières activités importantes.",
-              ].map((item) => (
-                <div key={item} className="flex gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-600">
-                  <Mail className="mt-0.5 size-4 shrink-0 text-emerald-700" aria-hidden="true" />
-                  {item}
-                </div>
-              ))}
+          <aside className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:self-start">
+            <h2 className="text-lg font-black text-slate-950">Après liaison</h2>
+            <div className="mt-4 grid gap-3">
+              {availableActions.map((action) => {
+                const Icon = action.icon
+                return (
+                  <div key={action.title} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white text-emerald-700 ring-1 ring-slate-100">
+                      <Icon className="size-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-black text-slate-950">{action.title}</span>
+                      <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{action.detail}</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-5 grid gap-2">
+              <Link href="/sign-in?role=client&redirect_url=%2Fespace-client" className="inline-flex min-h-10 items-center justify-center rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white transition hover:bg-slate-800">
+                Revenir à la connexion
+              </Link>
+              <Link href="/" className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                Accueil FinAssuro
+              </Link>
             </div>
           </aside>
         </section>

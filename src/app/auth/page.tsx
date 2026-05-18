@@ -12,7 +12,7 @@ const choices = [
   },
   {
     title: "Client assurance",
-    description: "Espace personnel pour préparer un besoin d’assurance.",
+    description: "Consulter le dossier, envoyer des documents, confirmer le profil et écrire au conseiller.",
     signInHref: "/sign-in?role=client&redirect_url=%2Fespace-client",
     signUpHref: "/sign-up?role=client&redirect_url=%2Fespace-client",
     icon: HeartPulse,
@@ -66,7 +66,9 @@ export default function AuthChoicePage() {
             return (
               <div
                 key={choice.title}
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+                className={choice.title === "Client assurance"
+                  ? "rounded-[1.25rem] border border-emerald-200 bg-white p-5 shadow-sm ring-2 ring-emerald-50"
+                  : "rounded-[1.25rem] border border-slate-200 bg-white p-5 shadow-sm"}
               >
                 <span className={`inline-flex size-12 items-center justify-center rounded-lg ring-1 ${choice.tone}`}>
                   <Icon className="size-6" aria-hidden="true" />
@@ -76,13 +78,13 @@ export default function AuthChoicePage() {
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   <Link
                     href={choice.signInHref}
-                    className="inline-flex items-center justify-center rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xl bg-slate-950 px-3 py-2 text-sm font-black text-white transition hover:bg-slate-800"
                   >
                     Se connecter
                   </Link>
                   <Link
                     href={choice.signUpHref}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50"
                   >
                     Créer
                     <ArrowRight className="size-4" aria-hidden="true" />
