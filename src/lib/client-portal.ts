@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import type { Prisma, User } from "@prisma/client"
 
 import { getCurrentUserWithOrg } from "@/lib/auth"
+import { homePathForUserRole } from "@/lib/auth/app-roles"
 import { prisma } from "@/lib/prisma"
 
 export async function getClientPortalUser() {
@@ -304,6 +305,10 @@ export async function getClientPortalContext(clientId?: string) {
     redirect(`/sign-in?role=client&redirect_url=${encodeURIComponent(redirectUrl)}`)
   }
 
-  const client = await findClientPortalPreviewRecord(user, clientId)
-  return { user, client, isPreview: user.role !== "CLIENT" }
+  if (user.role !== "CLIENT") {
+    redirect(clientId && user.role !== "DEVELOPER" ? `/clients/${encodeURIComponent(clientId)}` : homePathForUserRole(user.role))
+  }
+
+  const client = await findClientPortalRecord(user.email, clientId)
+  return { user, client, isPreview: false }
 }

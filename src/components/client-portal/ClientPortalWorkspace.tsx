@@ -638,6 +638,9 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
   const nextAction = requiredDocuments[0]?.name ?? openTasks[0]?.title ?? (!client.kycCompleted ? "Compléter mon profil client" : !client.consentGiven && activeConsents.length === 0 ? "Confirmer le consentement" : "Attendre le prochain suivi")
   const advisorPhone = client.organization.communicationSettings?.advisorSmsNotificationNumber ?? client.organization.communicationSettings?.twilioPhoneNumber ?? null
   const givenConsentTypes = new Set(activeConsents.map((consent) => consent.type))
+  const acceptedRequiredConsentCount = consentDefinitions.filter((consent) => givenConsentTypes.has(consent.type)).length
+  const consentCompletion = Math.round((acceptedRequiredConsentCount / consentDefinitions.length) * 100)
+  const consentReady = client.consentGiven || acceptedRequiredConsentCount === consentDefinitions.length
   const profileRequiredItems = [
     { label: "Prénom légal", done: Boolean(client.firstName) },
     { label: "Nom légal", done: Boolean(client.lastName) },
@@ -1366,47 +1369,54 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </form>
             </Panel>
 
-            <Panel id="portal-consents" className={showOnPage("consentements")} title="Confirmer mon profil client" description="Cette acceptation horodatée fige une version du dossier pour la révision du conseiller.">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <SummaryItem label="Nom" value={`${client.firstName} ${client.lastName}`} />
-                <SummaryItem label="Date de naissance" value={formatDate(client.dateOfBirth)} />
-                <SummaryItem label="Adresse" value={[client.addressLine1 ?? client.address, client.city, client.province, client.postalCode].filter(Boolean).join(", ") || "À compléter"} />
-                <SummaryItem label="Situation familiale" value={translate(familyStatusLabels, client.familyStatus)} />
-                <SummaryItem label="Personnes à charge" value={displayDependents(client)} />
-                <SummaryItem label="Emploi" value={[translate(employmentStatusLabels, client.employmentStatus, ""), client.occupation, client.employer].filter(Boolean).join(" · ") || "À compléter"} />
-                <SummaryItem label="Revenu" value={formatMoney(client.annualIncome ?? client.approximateIncome)} />
-                <SummaryItem label="Profil de risque" value={translate(riskProfileLabels, client.riskProfile)} />
-                <SummaryItem label="Objectif principal" value={client.primaryGoal ?? client.financialGoals ?? client.goals ?? "À compléter"} />
-                <SummaryItem label="Horizon" value={client.investmentHorizon ?? "À compléter"} />
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
-                    <CheckSquare className="size-5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-black text-slate-950">Consentements nécessaires</p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                      Chaque consentement est conservé séparément au dossier avec la date, l’adresse IP et le texte accepté.
-                    </p>
+            <Panel id="portal-consents" className={showOnPage("consentements")} title="Consentements à valider" description="Confirmez uniquement les autorisations nécessaires. Chaque décision est horodatée dans votre dossier.">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+                <div className={consentReady ? "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4" : "rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4"}>
+                  <div className="flex items-start gap-3">
+                    <span className={consentReady ? "grid size-10 shrink-0 place-items-center rounded-xl bg-white text-emerald-700" : "grid size-10 shrink-0 place-items-center rounded-xl bg-white text-amber-700"}>
+                      {consentReady ? <CheckCircle2 className="size-5" aria-hidden="true" /> : <ShieldCheck className="size-5" aria-hidden="true" />}
+                    </span>
+                    <div className="min-w-0">
+                      <p className={consentReady ? "text-sm font-black text-emerald-950" : "text-sm font-black text-amber-950"}>
+                        {consentReady ? "Consentements principaux actifs" : "Action requise pour finaliser le dossier"}
+                      </p>
+                      <p className={consentReady ? "mt-1 text-sm font-semibold leading-6 text-emerald-800" : "mt-1 text-sm font-semibold leading-6 text-amber-900"}>
+                        {consentReady
+                          ? "Vous pouvez quand même mettre à jour vos préférences ou confirmer une nouvelle version après une modification."
+                          : "Cochez les autorisations, confirmez l’exactitude du profil, puis signez électroniquement."}
+                      </p>
+                    </div>
                   </div>
                 </div>
+
+                <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Avancement</p>
+                  <p className="mt-1 text-3xl font-black text-slate-950">{consentCompletion} %</p>
+                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-white">
+                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(6, consentCompletion)}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs font-bold text-slate-500">
+                    {acceptedRequiredConsentCount}/{consentDefinitions.length} consentements requis acceptés
+                  </p>
+                </div>
               </div>
 
-              {client.kycCompleted && (client.consentGiven || client.consents.length > 0) ? (
-                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold leading-6 text-emerald-800">
-                  Votre profil est déjà confirmé. Une nouvelle confirmation peut être faite après une modification importante.
+              <details className="mt-3 rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+                <summary className="cursor-pointer list-none text-sm font-black text-slate-950">
+                  Vérifier le résumé du profil
+                  <span className="ml-2 text-xs font-bold text-slate-500">ouvrir / fermer</span>
+                </summary>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <SummaryItem label="Nom" value={`${client.firstName} ${client.lastName}`} />
+                  <SummaryItem label="Date de naissance" value={formatDate(client.dateOfBirth)} />
+                  <SummaryItem label="Adresse" value={[client.addressLine1 ?? client.address, client.city, client.province, client.postalCode].filter(Boolean).join(", ") || "À compléter"} />
+                  <SummaryItem label="Situation familiale" value={translate(familyStatusLabels, client.familyStatus)} />
+                  <SummaryItem label="Revenu" value={formatMoney(client.annualIncome ?? client.approximateIncome)} />
+                  <SummaryItem label="Objectif principal" value={client.primaryGoal ?? client.financialGoals ?? client.goals ?? "À compléter"} />
                 </div>
-              ) : null}
+              </details>
 
-              <form onSubmit={confirmKyc} className="mt-4 space-y-3">
-                <textarea
-                  name="note"
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                  placeholder="Note optionnelle si une information doit être précisée au conseiller."
-                />
+              <form onSubmit={confirmKyc} className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="grid gap-2">
                   {consentDefinitions.map((consent) => {
                     const alreadyGiven = givenConsentTypes.has(consent.type)
@@ -1422,32 +1432,44 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                         <span>
                           <span className="block font-black">{consent.title}</span>
                           <span className="block text-xs font-semibold leading-5 opacity-80">{consent.detail}</span>
-                          {alreadyGiven ? <span className="mt-1 block text-xs font-black text-emerald-700">Déjà accepté au dossier.</span> : null}
+                          {alreadyGiven ? <span className="mt-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[0.7rem] font-black text-emerald-700">Déjà accepté</span> : null}
                         </span>
                       </label>
                     )
                   })}
                 </div>
-                <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700">
-                  <input name="accepted" type="checkbox" className="mt-1 size-4 accent-emerald-600" required={isPreview ? false : true} />
-                  <span>Je confirme que les renseignements affichés dans mon dossier sont exacts et complets à ma connaissance, et j’autorise mon conseiller à les utiliser pour le suivi, la conformité et l’analyse de mes besoins.</span>
-                </label>
-                <label className="grid gap-1.5 text-sm font-black text-slate-700">
-                  Signature électronique
-                  <Input
-                    name="typedSignature"
-                    required={!isPreview}
-                    placeholder={`${client.firstName} ${client.lastName}`}
-                    className="rounded-xl"
-                  />
-                  <span className="text-xs font-semibold leading-5 text-slate-500">
-                    Tapez votre nom complet pour signer électroniquement cette confirmation.
-                  </span>
-                </label>
-                <Button className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" disabled={isConfirmingKyc}>
-                  {isConfirmingKyc ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />}
-                  {isPreview ? "Copier le lien de confirmation client" : "Confirmer et signer électroniquement"}
-                </Button>
+
+                <div className="space-y-3 rounded-[1.25rem] border border-slate-200 bg-white p-4">
+                  <label className="grid gap-1.5 text-sm font-black text-slate-700">
+                    Note optionnelle
+                    <textarea
+                      name="note"
+                      rows={3}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                      placeholder="Précision pour le conseiller."
+                    />
+                  </label>
+                  <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700">
+                    <input name="accepted" type="checkbox" className="mt-1 size-4 accent-emerald-600" required={isPreview ? false : true} />
+                    <span>Je confirme que les renseignements de mon dossier sont exacts et complets à ma connaissance.</span>
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-black text-slate-700">
+                    Signature électronique
+                    <Input
+                      name="typedSignature"
+                      required={!isPreview}
+                      placeholder={`${client.firstName} ${client.lastName}`}
+                      className="rounded-xl"
+                    />
+                    <span className="text-xs font-semibold leading-5 text-slate-500">
+                      Tapez votre nom complet.
+                    </span>
+                  </label>
+                  <Button className="w-full rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" disabled={isConfirmingKyc}>
+                    {isConfirmingKyc ? <Loader2 className="size-4 animate-spin" /> : <PenLine className="size-4" />}
+                    Signer et confirmer
+                  </Button>
+                </div>
               </form>
             </Panel>
 
