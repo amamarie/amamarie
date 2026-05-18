@@ -194,6 +194,21 @@ export const subscriptionMonthlyRevenue = {
   },
 } as const
 
+export const subscriptionAnnualMonthlyRevenue = {
+  standard: {
+    ESSENTIEL: { EUR: 49, CAD: 75 },
+    CROISSANCE: { EUR: 119, CAD: 179 },
+    CABINET: { EUR: 329, CAD: 489 },
+    RESEAU: { EUR: 329, CAD: 489 },
+  },
+  beta: {
+    ESSENTIEL: { EUR: 29, CAD: 39 },
+    CROISSANCE: { EUR: 79, CAD: 109 },
+    CABINET: { EUR: 199, CAD: 279 },
+    RESEAU: { EUR: 199, CAD: 279 },
+  },
+} as const
+
 export const moduleCatalog = [
   { key: "dashboard", label: "Tableau de bord" },
   { key: "prospects", label: "Prospects" },

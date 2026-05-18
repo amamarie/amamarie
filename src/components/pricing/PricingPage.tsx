@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils"
 type Currency = SubscriptionCurrencyKey
 type PricingMode = SubscriptionPricingModeKey
 type PlanKey = SubscriptionPlanKey
+type BillingInterval = "monthly" | "annual"
 
 const currencyLabels: Record<Currency, { suffix: string }> = {
   EUR: { suffix: "EUR" },
@@ -164,6 +165,7 @@ const setupFees = [
 
 export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; priceOverrides?: PlanMonthlyPriceOverrides }) {
   const [currency, setCurrency] = useState<Currency>("EUR")
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly")
   const prices = subscriptionPrices[mode]
   const isBeta = mode === "beta"
   const pageTitle = isBeta ? "Offre bêta FinAdvisor" : "Forfaits FinAdvisor"
@@ -239,7 +241,10 @@ export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; 
             ) : null}
           </div>
 
-          <CurrencySwitch currency={currency} setCurrency={setCurrency} />
+          <div className="grid gap-3">
+            <CurrencySwitch currency={currency} setCurrency={setCurrency} />
+            <BillingIntervalSwitch interval={billingInterval} setInterval={setBillingInterval} />
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
@@ -248,12 +253,13 @@ export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; 
               key={plan.key}
               plan={plan}
               price={{
-                monthly: monthlyPrice(plan.key),
+                monthly: billingInterval === "annual" ? prices[plan.key][currency].annual : monthlyPrice(plan.key),
                 annual: prices[plan.key][currency].annual,
               }}
               currency={selectedCurrency}
               currencyCode={currency}
               pricingMode={mode}
+              billingInterval={billingInterval}
               isBeta={isBeta}
             />
           ))}
@@ -332,6 +338,40 @@ export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; 
   )
 }
 
+function BillingIntervalSwitch({
+  interval,
+  setInterval,
+}: {
+  interval: BillingInterval
+  setInterval: (interval: BillingInterval) => void
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-950">Paiement</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">Choisissez mensuel ou annuel avant de passer à Stripe.</p>
+      <div className="mt-4 grid grid-cols-2 rounded-full border-2 border-slate-200 bg-slate-50 p-1">
+        {([
+          ["monthly", "Mensuel"],
+          ["annual", "Annuel"],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setInterval(value)}
+            className={cn(
+              "rounded-full px-3 py-2 text-sm font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
+              interval === value ? "bg-slate-950 text-white shadow-[0_3px_0_#020617]" : "text-slate-600 hover:bg-white"
+            )}
+            aria-pressed={interval === value}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function CurrencySwitch({
   currency,
   setCurrency,
@@ -369,6 +409,7 @@ function PlanCard({
   currency,
   currencyCode,
   pricingMode,
+  billingInterval,
   isBeta,
 }: {
   plan: (typeof plans)[number]
@@ -376,9 +417,41 @@ function PlanCard({
   currency: { suffix: string }
   currencyCode: Currency
   pricingMode: PricingMode
+  billingInterval: BillingInterval
   isBeta: boolean
 }) {
   const Icon = plan.icon
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const signUpHref = `/sign-up?role=advisor&redirect_url=%2Fdashboard&plan=${plan.key}&pricing=${pricingMode}&currency=${currencyCode}`
+
+  async function startCheckout() {
+    setIsRedirecting(true)
+    try {
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: plan.key,
+          pricingMode,
+          currency: currencyCode,
+          interval: billingInterval,
+        }),
+      })
+      const payload = await response.json().catch(() => null) as { ok?: boolean; data?: { url?: string }; error?: { code?: string } } | null
+      if (response.status === 401 || response.status === 403) {
+        window.location.href = signUpHref
+        return
+      }
+      if (!response.ok || !payload?.ok || !payload.data?.url) {
+        throw new Error(payload?.error?.code ?? "CHECKOUT_FAILED")
+      }
+      window.location.href = payload.data.url
+    } catch {
+      window.location.href = signUpHref
+    } finally {
+      setIsRedirecting(false)
+    }
+  }
 
   return (
     <article
@@ -412,7 +485,11 @@ function PlanCard({
           <p className="pb-1 text-sm font-semibold text-slate-500">/ mois {currency.suffix}</p>
         </div>
         <p className="mt-2 text-sm font-semibold text-emerald-800">
-          {isBeta ? "Prix bêta garanti 12 mois." : `${price.annual} / mois avec engagement annuel.`}
+          {billingInterval === "annual"
+            ? "Facturé annuellement via Stripe."
+            : isBeta
+              ? "Prix bêta garanti 12 mois."
+              : `${price.annual} / mois avec engagement annuel.`}
         </p>
       </div>
 
@@ -437,12 +514,18 @@ function PlanCard({
         </ul>
       </div>
 
-      <Button asChild className={cn("mt-5 rounded-lg", plan.popular ? "bg-sky-600 hover:bg-sky-700" : "bg-slate-950 hover:bg-slate-800")}>
-        <Link href={`/sign-up?role=advisor&redirect_url=%2Fdashboard&plan=${plan.key}&pricing=${pricingMode}&currency=${currencyCode}`}>
-          {plan.cta}
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </Link>
+      <Button
+        type="button"
+        disabled={isRedirecting}
+        onClick={startCheckout}
+        className={cn("mt-5 rounded-lg", plan.popular ? "bg-sky-600 hover:bg-sky-700" : "bg-slate-950 hover:bg-slate-800")}
+      >
+        {isRedirecting ? "Ouverture Stripe..." : plan.cta}
+        <ArrowRight className="size-4" aria-hidden="true" />
       </Button>
+      <Link href={signUpHref} className="mt-3 text-center text-xs font-semibold leading-5 text-slate-500 hover:text-slate-900">
+        Créer un compte sans paiement immédiat
+      </Link>
     </article>
   )
 }
