@@ -18,12 +18,15 @@ import {
   UsersRound,
   Zap,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
   subscriptionMonthlyRevenue,
   subscriptionPrices,
+  normalizeSubscriptionCurrency,
+  normalizeSubscriptionPlan,
+  normalizeSubscriptionPricingMode,
   type PlanMonthlyPriceOverrides,
   type SubscriptionCurrencyKey,
   type SubscriptionPlanKey,
@@ -35,6 +38,12 @@ type Currency = SubscriptionCurrencyKey
 type PricingMode = SubscriptionPricingModeKey
 type PlanKey = SubscriptionPlanKey
 type BillingInterval = "monthly" | "annual"
+type AutoCheckoutSelection = {
+  plan?: string
+  pricingMode?: string
+  currency?: string
+  interval?: string
+}
 
 const currencyLabels: Record<Currency, { suffix: string }> = {
   EUR: { suffix: "EUR" },
@@ -163,9 +172,23 @@ const setupFees = [
   ["Cabinet", "499 € ou offert en annuel", "729 $ ou offert en annuel"],
 ]
 
-export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; priceOverrides?: PlanMonthlyPriceOverrides }) {
-  const [currency, setCurrency] = useState<Currency>("EUR")
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly")
+function normalizeInterval(value: unknown): BillingInterval {
+  const normalized = String(value ?? "").trim().toLowerCase()
+  return normalized === "annual" || normalized === "annuel" || normalized === "yearly" ? "annual" : "monthly"
+}
+
+export function PricingPage({
+  mode,
+  priceOverrides = {},
+  autoCheckout,
+}: {
+  mode: PricingMode
+  priceOverrides?: PlanMonthlyPriceOverrides
+  autoCheckout?: AutoCheckoutSelection
+}) {
+  const autoCheckoutPlan = autoCheckout ? normalizeSubscriptionPlan(autoCheckout.plan) : null
+  const [currency, setCurrency] = useState<Currency>(() => autoCheckout ? normalizeSubscriptionCurrency(autoCheckout.currency) : "EUR")
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(() => normalizeInterval(autoCheckout?.interval))
   const prices = subscriptionPrices[mode]
   const isBeta = mode === "beta"
   const pageTitle = isBeta ? "Offre bêta FinAdvisor" : "Forfaits FinAdvisor"
@@ -260,6 +283,7 @@ export function PricingPage({ mode, priceOverrides = {} }: { mode: PricingMode; 
               currencyCode={currency}
               pricingMode={mode}
               billingInterval={billingInterval}
+              autoCheckout={autoCheckoutPlan === plan.key}
               isBeta={isBeta}
             />
           ))}
@@ -410,6 +434,7 @@ function PlanCard({
   currencyCode,
   pricingMode,
   billingInterval,
+  autoCheckout,
   isBeta,
 }: {
   plan: (typeof plans)[number]
@@ -418,10 +443,13 @@ function PlanCard({
   currencyCode: Currency
   pricingMode: PricingMode
   billingInterval: BillingInterval
+  autoCheckout?: boolean
   isBeta: boolean
 }) {
   const Icon = plan.icon
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const checkoutRedirect = `/forfaits?checkout=1&plan=${plan.key}&pricing=${normalizeSubscriptionPricingMode(pricingMode)}&currency=${currencyCode}&interval=${billingInterval}`
+  const paymentSignUpHref = `/sign-up?role=advisor&redirect_url=${encodeURIComponent(checkoutRedirect)}&plan=${plan.key}&pricing=${pricingMode}&currency=${currencyCode}`
   const signUpHref = `/sign-up?role=advisor&redirect_url=%2Fdashboard&plan=${plan.key}&pricing=${pricingMode}&currency=${currencyCode}`
 
   async function startCheckout() {
@@ -439,7 +467,7 @@ function PlanCard({
       })
       const payload = await response.json().catch(() => null) as { ok?: boolean; data?: { url?: string }; error?: { code?: string } } | null
       if (response.status === 401 || response.status === 403) {
-        window.location.href = signUpHref
+        window.location.href = paymentSignUpHref
         return
       }
       if (!response.ok || !payload?.ok || !payload.data?.url) {
@@ -447,11 +475,17 @@ function PlanCard({
       }
       window.location.href = payload.data.url
     } catch {
-      window.location.href = signUpHref
+      window.location.href = paymentSignUpHref
     } finally {
       setIsRedirecting(false)
     }
   }
+
+  useEffect(() => {
+    if (!autoCheckout || isRedirecting) return
+    void startCheckout()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCheckout])
 
   return (
     <article
