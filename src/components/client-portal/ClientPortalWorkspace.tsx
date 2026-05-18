@@ -1141,57 +1141,56 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-5 bg-slate-950 p-5 text-white lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide text-emerald-200">
-                <Link href={portalHref("overview")} className="transition hover:text-white">Espace client</Link>
-                <ChevronRight className="size-3.5" aria-hidden="true" />
-                <span>{activePageDetails.eyebrow}</span>
-              </div>
-              <div className="mt-4 flex items-start gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white text-emerald-700 ring-1 ring-white/20">
-                  <ActivePageIcon className="size-6" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-300">Bonjour {greetingName}</p>
-                  <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">{activePageDetails.title}</h1>
-                  <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">{activePageDetails.description}</p>
-                </div>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {activePageDetails.primaryLabel && activePageDetails.primaryPage ? (
-                  <Button asChild className="h-auto min-h-10 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950 hover:bg-emerald-400">
-                    <Link href={portalHref(activePageDetails.primaryPage)}>{activePageDetails.primaryLabel}</Link>
-                  </Button>
-                ) : null}
-                {activePageDetails.secondaryLabel && activePageDetails.secondaryPage ? (
-                  <Button asChild variant="outline" className="h-auto min-h-10 rounded-xl border-white/20 bg-white/10 px-4 py-2 text-sm font-black text-white hover:bg-white/15">
-                    <Link href={portalHref(activePageDetails.secondaryPage)}>{activePageDetails.secondaryLabel}</Link>
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            <div className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-4xl font-black">{completion} %</p>
-                  <p className="text-sm font-bold text-slate-300">Progression du dossier</p>
-                </div>
-                <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-emerald-700">{advisorInitials}</span>
-              </div>
-              <div className="mt-4 h-4 overflow-hidden rounded-full bg-white/20">
-                <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.max(6, completion)}%` }} />
-              </div>
-              <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold leading-5 text-emerald-50">
-                Prochaine action: {nextAction}
-              </p>
-            </div>
-          </div>
-        </section>
-
         {activePage === "overview" ? (
           <>
+            <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+              <div className="grid gap-5 bg-slate-950 p-5 text-white lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-wide text-emerald-200">
+                    <Link href={portalHref("overview")} className="transition hover:text-white">Espace client</Link>
+                    <ChevronRight className="size-3.5" aria-hidden="true" />
+                    <span>{activePageDetails.eyebrow}</span>
+                  </div>
+                  <div className="mt-4 flex items-start gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-white text-emerald-700 ring-1 ring-white/20">
+                      <ActivePageIcon className="size-6" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-300">Bonjour {greetingName}</p>
+                      <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">{activePageDetails.title}</h1>
+                      <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">{activePageDetails.description}</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {activePageDetails.primaryLabel && activePageDetails.primaryPage ? (
+                      <Button asChild className="h-auto min-h-10 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950 hover:bg-emerald-400">
+                        <Link href={portalHref(activePageDetails.primaryPage)}>{activePageDetails.primaryLabel}</Link>
+                      </Button>
+                    ) : null}
+                    {activePageDetails.secondaryLabel && activePageDetails.secondaryPage ? (
+                      <Button asChild variant="outline" className="h-auto min-h-10 rounded-xl border-white/20 bg-white/10 px-4 py-2 text-sm font-black text-white hover:bg-white/15">
+                        <Link href={portalHref(activePageDetails.secondaryPage)}>{activePageDetails.secondaryLabel}</Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-4xl font-black">{completion} %</p>
+                      <p className="text-sm font-bold text-slate-300">Progression du dossier</p>
+                    </div>
+                    <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white text-lg font-black text-emerald-700">{advisorInitials}</span>
+                  </div>
+                  <div className="mt-4 h-4 overflow-hidden rounded-full bg-white/20">
+                    <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.max(6, completion)}%` }} />
+                  </div>
+                  <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold leading-5 text-emerald-50">
+                    Prochaine action: {nextAction}
+                  </p>
+                </div>
+              </div>
+            </section>
             <section className="mt-5 grid gap-4 lg:grid-cols-6">
               {completionItems.map((item) => (
                 <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1210,15 +1209,9 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               ))}
             </section>
           </>
-        ) : (
-          <section className="mt-5 grid gap-4 md:grid-cols-3">
-            <PageSignalCard icon={CheckCircle2} label="Dossier" value={`${completion} % complété`} detail="Synchronisé avec le conseiller" />
-            <PageSignalCard icon={Clock3} label="À traiter" value={`${openTasks.length + requiredDocuments.length} action${openTasks.length + requiredDocuments.length > 1 ? "s" : ""}`} detail={nextAction} />
-            <PageSignalCard icon={Mail} label="Conseiller" value={client.advisor?.name ?? "À assigner"} detail={client.advisor?.email ?? client.organization.name} />
-          </section>
-        )}
+        ) : null}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className={`${activePage === "overview" ? "mt-6" : "mt-4"} grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]`}>
           <PortalSidebar
             items={portalNavItems}
             activePage={activePage}
@@ -1235,6 +1228,18 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           />
 
           <div className="min-w-0 space-y-6">
+            {activePage !== "overview" ? (
+              <SectionPageHeader
+                details={activePageDetails}
+                icon={ActivePageIcon}
+                greetingName={greetingName}
+                completion={completion}
+                nextAction={nextAction}
+                advisorName={client.advisor?.name ?? "À assigner"}
+                primaryHref={activePageDetails.primaryPage ? portalHref(activePageDetails.primaryPage) : undefined}
+                secondaryHref={activePageDetails.secondaryPage ? portalHref(activePageDetails.secondaryPage) : undefined}
+              />
+            ) : null}
             <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" || activePage === "profil" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
           <div className={activePage === "overview" ? "hidden" : "space-y-5"}>
             <Panel id="portal-profile-questionnaire" className={`xl:col-span-2 ${showOnPage("profil")}`} title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
@@ -1971,6 +1976,74 @@ function PageSignalCard({ icon: Icon, label, value, detail }: { icon: LucideIcon
         <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
         <p className="mt-1 truncate text-xs font-semibold text-slate-500">{detail}</p>
       </div>
+    </div>
+  )
+}
+
+function SectionPageHeader({
+  details,
+  icon: Icon,
+  greetingName,
+  completion,
+  nextAction,
+  advisorName,
+  primaryHref,
+  secondaryHref,
+}: {
+  details: ClientPortalPageDetails
+  icon: LucideIcon
+  greetingName: string
+  completion: number
+  nextAction: string
+  advisorName: string
+  primaryHref?: string
+  secondaryHref?: string
+}) {
+  return (
+    <section className="rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <Icon className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">{details.eyebrow}</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{details.title}</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-500">{details.description}</p>
+          </div>
+        </div>
+        <div className="grid min-w-0 gap-2 sm:grid-cols-3 xl:w-[25rem]">
+          <MiniMetric label="Client" value={greetingName} />
+          <MiniMetric label="Dossier" value={`${completion} %`} />
+          <MiniMetric label="Conseiller" value={advisorName} />
+        </div>
+      </div>
+      <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
+        <p className="min-w-0 text-sm font-bold leading-6 text-slate-600">
+          Prochaine action : <span className="font-black text-slate-950">{nextAction}</span>
+        </p>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {details.primaryLabel && primaryHref ? (
+            <Button asChild className="h-auto min-h-9 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700">
+              <Link href={primaryHref}>{details.primaryLabel}</Link>
+            </Button>
+          ) : null}
+          {details.secondaryLabel && secondaryHref ? (
+            <Button asChild variant="outline" className="h-auto min-h-9 rounded-xl bg-white px-3 py-2 text-xs font-black">
+              <Link href={secondaryHref}>{details.secondaryLabel}</Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
     </div>
   )
 }
