@@ -1269,7 +1269,8 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               </div>
 
               <form
-                className="space-y-5"
+                className="space-y-4"
+                noValidate
                 onSubmit={(event) => {
                   const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
                   saveProfileQuestionnaire(event, submitter?.value === "submit" ? "submit" : "draft")
@@ -1516,7 +1517,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </Panel>
 
             <Panel className={showOnPage("overview", "messages")} title="Messages du dossier" description="Conversations ajoutées depuis le portail client.">
-              <div className="space-y-3">
+              <CompactStack>
                 {client.noteItems.length === 0 ? <EmptyLine text="Aucun message portail pour le moment." /> : null}
                 {client.noteItems.map((note) => (
                   <div key={note.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
@@ -1528,14 +1529,14 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                     <p className="mt-2 text-xs font-bold text-slate-400">{note.user?.name ?? "Portail"}</p>
                   </div>
                 ))}
-              </div>
+              </CompactStack>
             </Panel>
           </div>
         </section>
 
             <section className={activePage === "overview" ? "grid gap-5 xl:grid-cols-3" : "grid gap-5"}>
           <Panel id="portal-documents" className={showOnPage("overview", "documents")} title="Documents au dossier" description="Documents reçus, demandés ou validés.">
-            <div className="space-y-3">
+            <CompactStack>
               {client.documents.length === 0 ? <EmptyLine text="Aucun document visible pour le moment." /> : null}
               {client.documents.map((document) => (
                 <PortalDocumentLine
@@ -1547,11 +1548,11 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                   onDownload={() => openDocument(document.id, "download")}
                 />
               ))}
-            </div>
+            </CompactStack>
           </Panel>
 
           <Panel id="portal-analyses" className={showOnPage("analyses")} title="Votre analyse d’assurance" description="Suivez les analyses préparées par le conseiller et les rapports disponibles dans votre dossier.">
-            <div className="space-y-3">
+            <CompactStack>
               {client.insuranceNeedsAnalyses.length === 0 ? <EmptyLine text="Aucune analyse visible pour le moment." /> : null}
               {client.insuranceNeedsAnalyses.map((analysis) => (
                 <div key={analysis.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
@@ -1627,11 +1628,11 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                   </div>
                 </div>
               ))}
-            </div>
+            </CompactStack>
           </Panel>
 
           <Panel id="portal-recommendations" className={showOnPage("recommandations")} title="Vos recommandations" description="Rapports présentés par votre conseiller, décisions et preuves de signature.">
-            <div className="space-y-3">
+            <CompactStack>
               {client.productRecommendations.length === 0 ? <EmptyLine text="Aucune recommandation visible pour le moment." /> : null}
               {client.productRecommendations.map((recommendation) => {
                 const reportLink = recommendation.documents.find((document) => document.documentType === "RECOMMENDATION_REPORT" || document.document?.id === recommendation.reportDocumentId)
@@ -1700,7 +1701,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                   </div>
                 )
               })}
-            </div>
+            </CompactStack>
           </Panel>
 
           <Panel id="portal-advisor" className={showOnPage("overview", "conseiller")} title="Conseiller et cabinet" description="Coordonnées liées au dossier.">
@@ -1713,7 +1714,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </Panel>
 
           <Panel className={showOnPage("consentements")} title="Mes consentements et préférences" description="Autorisations, refus et retraits conservés avec preuve au dossier.">
-            <div className="space-y-3">
+            <CompactStack>
               <div className="grid gap-2 sm:grid-cols-3">
                 {["ACCESS", "RECTIFICATION", "PORTABILITY"].map((requestType) => (
                   <Button
@@ -1795,16 +1796,16 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                   </div>
                 </div>
               ))}
-            </div>
+            </CompactStack>
           </Panel>
 
           <Panel id="portal-history" className={showOnPage("historique")} title="Évolution du dossier" description="Historique récent synchronisé depuis le CRM.">
-            <div className="space-y-3">
+            <CompactStack>
               {client.activities.length === 0 ? <EmptyLine text="Aucune activité visible pour le moment." /> : null}
               {client.activities.map((activity) => (
                 <ListLine key={activity.id} icon={CheckCircle2} title={activity.title} detail={`${activity.description ?? statusLabel(activity.type)} · ${formatDate(activity.createdAt)}`} />
               ))}
-            </div>
+            </CompactStack>
           </Panel>
         </section>
           </div>
@@ -1974,15 +1975,29 @@ function PageSignalCard({ icon: Icon, label, value, detail }: { icon: LucideIcon
   )
 }
 
-function QuestionnaireBlock({ title, detail, children }: { title: string; detail: string; children: ReactNode }) {
+function QuestionnaireBlock({ title, detail, defaultOpen = false, children }: { title: string; detail: string; defaultOpen?: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-      <div>
-        <h3 className="text-sm font-black text-slate-950">{title}</h3>
-        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{detail}</p>
-      </div>
+    <details className="group rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4 open:bg-white" open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-sm font-black text-slate-950">{title}</span>
+          <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{detail}</span>
+        </span>
+        <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 group-open:bg-emerald-50 group-open:text-emerald-700 group-open:ring-emerald-100">
+          <span className="group-open:hidden">Ouvrir</span>
+          <span className="hidden group-open:inline">Fermer</span>
+        </span>
+      </summary>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">{children}</div>
-    </section>
+    </details>
+  )
+}
+
+function CompactStack({ children }: { children: ReactNode }) {
+  return (
+    <div className="max-h-[34rem] space-y-3 overflow-y-auto pr-1">
+      {children}
+    </div>
   )
 }
 
