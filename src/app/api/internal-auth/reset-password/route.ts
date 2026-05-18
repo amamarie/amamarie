@@ -2,76 +2,54 @@ import { NextResponse } from "next/server"
 
 import { normalizeSaasAppRole } from "@/lib/auth/app-roles"
 import {
-  hashInternalPassword,
-  requestedRoleMatchesUser,
+  requestInternalPasswordReset,
+  resetInternalPasswordWithToken,
 } from "@/lib/auth/internal"
 import { isInternalAuthEnabled } from "@/lib/auth-config"
-import { prisma } from "@/lib/prisma"
-
-const TEMPORARY_PASSWORD = "FinAssuro2026"
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === "production" || !isInternalAuthEnabled()) {
+  if (!isInternalAuthEnabled()) {
     return NextResponse.json(
-      { ok: false, error: "La réinitialisation locale n’est pas activée." },
-      { status: 404 }
+      { ok: false, error: "L’authentification interne n’est pas activée." },
+      { status: 409 }
     )
   }
 
   const payload = await request.json().catch(() => null)
-  const email = typeof payload?.email === "string" ? payload.email.trim().toLowerCase() : ""
   const role = normalizeSaasAppRole(payload?.role)
+  const token = typeof payload?.token === "string" ? payload.token : ""
+  const password = typeof payload?.password === "string" ? payload.password : ""
+  const email = typeof payload?.email === "string" ? payload.email : ""
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  try {
+    if (token) {
+      await resetInternalPasswordWithToken({ token, password, role })
+
+      return NextResponse.json({
+        ok: true,
+        message: "Mot de passe modifié. Vous pouvez maintenant vous connecter.",
+      })
+    }
+
+    await requestInternalPasswordReset({ email, role })
+
+    return NextResponse.json({
+      ok: true,
+      message: "Si un compte correspond à ce courriel, un lien sécurisé vient d’être envoyé.",
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Réinitialisation impossible."
+    const isEmailError = message === "EMAIL_NOT_CONFIGURED" || message.startsWith("EMAIL_SEND_FAILED:")
+    const status = isEmailError ? 503 : 400
+
     return NextResponse.json(
-      { ok: false, error: "Entre d’abord un courriel valide." },
-      { status: 400 }
+      {
+        ok: false,
+        error: isEmailError
+          ? "L’envoi du courriel de réinitialisation a échoué. Vérifiez RESEND_API_KEY et EMAIL_FROM."
+          : message,
+      },
+      { status }
     )
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: { internalCredential: true },
-  })
-
-  if (!user) {
-    return NextResponse.json(
-      { ok: false, error: "Aucun utilisateur ne correspond à ce courriel." },
-      { status: 404 }
-    )
-  }
-
-  if (!requestedRoleMatchesUser(role, user.role) || user.role === "CLIENT") {
-    return NextResponse.json(
-      { ok: false, error: "Ce compte ne peut pas être réinitialisé depuis cette page." },
-      { status: 403 }
-    )
-  }
-
-  const passwordPayload = await hashInternalPassword(TEMPORARY_PASSWORD)
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      internalCredential: user.internalCredential
-        ? { update: { ...passwordPayload, passwordUpdatedAt: new Date() } }
-        : { create: passwordPayload },
-    },
-  })
-
-  await prisma.auditLog.create({
-    data: {
-      organizationId: user.organizationId,
-      userId: user.id,
-      action: "SELF_SERVICE_PASSWORD_RESET",
-      entityType: "User",
-      entityId: user.id,
-      newValue: { email: user.email, role: user.role },
-    },
-  }).catch(() => null)
-
-  return NextResponse.json({
-    ok: true,
-    temporaryPassword: TEMPORARY_PASSWORD,
-  })
 }

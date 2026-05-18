@@ -55,6 +55,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const rawPlan = Array.isArray(params?.plan) ? params.plan[0] : params?.plan
   const rawPricing = Array.isArray(params?.pricing) ? params.pricing[0] : params?.pricing
   const rawCurrency = Array.isArray(params?.currency) ? params.currency[0] : params?.currency
+  const rawResetToken = Array.isArray(params?.reset_token) ? params.reset_token[0] : params?.reset_token
   const appRole = normalizeSaasAppRole(rawRole)
   const subscriptionPlan = normalizeSubscriptionPlan(rawPlan)
   const subscriptionPricingMode = normalizeSubscriptionPricingMode(rawPricing)
@@ -140,6 +141,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             role={appRole}
             redirectUrl={redirectUrl}
             initialEmail={initialEmail}
+            resetToken={rawResetToken}
             targetLabel={selectedChoice.label}
             currentUser={appUser ? { email: appUser.email, name: appUser.name } : null}
             alternateHref={signUpUrl}

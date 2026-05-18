@@ -16,6 +16,7 @@ type InternalAuthCardProps = {
   subscriptionPricingMode?: SubscriptionPricingModeKey
   subscriptionCurrency?: SubscriptionCurrencyKey
   initialEmail?: string
+  resetToken?: string
   targetLabel: string
   currentUser?: {
     email?: string | null
@@ -32,6 +33,7 @@ export function InternalAuthCard({
   subscriptionPricingMode,
   subscriptionCurrency,
   initialEmail,
+  resetToken,
   targetLabel,
   currentUser,
   alternateHref,
@@ -42,8 +44,15 @@ export function InternalAuthCard({
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
+  const [twoFactorChallengeId, setTwoFactorChallengeId] = useState<string | null>(null)
+  const [twoFactorEmail, setTwoFactorEmail] = useState<string | null>(null)
+  const [twoFactorCode, setTwoFactorCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResettingPassword, setIsResettingPassword] = useState(false)
+  const [isVerifyingTwoFactor, setIsVerifyingTwoFactor] = useState(false)
+  const [isCompletingReset, setIsCompletingReset] = useState(false)
 
   const title = mode === "sign-up" ? `Créer l’accès ${targetLabel.toLowerCase()}` : "Connexion FinAssuro"
   const submitLabel = mode === "sign-up" ? "Créer l’accès et entrer" : "Se connecter"
@@ -87,11 +96,63 @@ export function InternalAuthCard({
         mode,
       }),
     })
-    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; redirectUrl?: string } | null
+    const data = (await response.json().catch(() => null)) as {
+      ok?: boolean
+      error?: string
+      redirectUrl?: string
+      requiresTwoFactor?: boolean
+      challengeId?: string
+      email?: string
+    } | null
     setIsSubmitting(false)
 
     if (!response.ok || !data?.ok) {
       setError(data?.error ?? "Connexion impossible.")
+      return
+    }
+
+    if (data.requiresTwoFactor && data.challengeId) {
+      setTwoFactorChallengeId(data.challengeId)
+      setTwoFactorEmail(data.email ?? null)
+      setResetMessage("Code de vérification envoyé par courriel.")
+      return
+    }
+
+    window.location.href = data.redirectUrl ?? redirectUrl
+  }
+
+  async function verifyTwoFactor(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setResetMessage(null)
+
+    if (!twoFactorChallengeId) {
+      setError("Demande de vérification expirée. Reconnectez-vous.")
+      return
+    }
+
+    if (twoFactorCode.replace(/\D/g, "").length !== 6) {
+      setError("Entrez le code à 6 chiffres reçu par courriel.")
+      return
+    }
+
+    setIsVerifyingTwoFactor(true)
+
+    const response = await fetch("/api/internal-auth/verify-2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeId: twoFactorChallengeId,
+        code: twoFactorCode,
+        role,
+        redirectUrl,
+      }),
+    })
+    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; redirectUrl?: string } | null
+    setIsVerifyingTwoFactor(false)
+
+    if (!response.ok || !data?.ok) {
+      setError(data?.error ?? "Code de vérification invalide.")
       return
     }
 
@@ -119,7 +180,7 @@ export function InternalAuthCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, role }),
     })
-    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; temporaryPassword?: string } | null
+    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; message?: string } | null
     setIsResettingPassword(false)
 
     if (!response.ok || !data?.ok) {
@@ -127,8 +188,43 @@ export function InternalAuthCard({
       return
     }
 
-    setPassword(data.temporaryPassword ?? "")
-    setResetMessage(`Mot de passe temporaire: ${data.temporaryPassword ?? ""}`)
+    setResetMessage(data.message ?? "Si un compte correspond à ce courriel, un lien sécurisé vient d’être envoyé.")
+  }
+
+  async function completePasswordReset(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setResetMessage(null)
+
+    if (newPassword.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères.")
+      return
+    }
+
+    if (newPassword !== newPasswordConfirmation) {
+      setError("Les deux mots de passe ne sont pas identiques.")
+      return
+    }
+
+    setIsCompletingReset(true)
+
+    const response = await fetch("/api/internal-auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: resetToken, password: newPassword, role }),
+    })
+    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string; message?: string } | null
+    setIsCompletingReset(false)
+
+    if (!response.ok || !data?.ok) {
+      setError(data?.error ?? "Réinitialisation impossible.")
+      return
+    }
+
+    setPassword("")
+    setNewPassword("")
+    setNewPasswordConfirmation("")
+    setResetMessage(data.message ?? "Mot de passe modifié. Vous pouvez maintenant vous connecter.")
   }
 
   if (currentUser) {
@@ -154,6 +250,131 @@ export function InternalAuthCard({
           </Button>
         </div>
       </div>
+    )
+  }
+
+  if (resetToken) {
+    return (
+      <form onSubmit={completePasswordReset} className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <ShieldCheck className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-500">Réinitialisation sécurisée</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Choisir un nouveau mot de passe</h2>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-slate-600">
+          Le lien expire rapidement. Après modification, reconnectez-vous avec le nouveau mot de passe et le code de vérification envoyé par courriel.
+        </p>
+
+        <div className="mt-5 grid gap-4">
+          <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+            Nouveau mot de passe
+            <PasswordInput
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="Minimum 8 caractères"
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium text-slate-800">
+            Confirmer le mot de passe
+            <PasswordInput
+              value={newPasswordConfirmation}
+              onChange={(event) => setNewPasswordConfirmation(event.target.value)}
+              placeholder="Retaper le mot de passe"
+              autoComplete="new-password"
+            />
+          </label>
+        </div>
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+            {error}
+          </div>
+        ) : null}
+
+        {resetMessage ? (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900">
+            {resetMessage}
+          </div>
+        ) : null}
+
+        <Button type="submit" disabled={isCompletingReset} className="mt-5 w-full rounded-lg bg-slate-950 hover:bg-slate-800">
+          {isCompletingReset ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : null}
+          Modifier le mot de passe
+        </Button>
+
+        <Link href={`/sign-in?role=${role}&redirect_url=${encodeURIComponent(redirectUrl)}${email ? `&email=${encodeURIComponent(email)}` : ""}`} className="mt-4 block text-center text-sm font-semibold text-emerald-700 transition hover:text-emerald-900">
+          Retour à la connexion
+        </Link>
+      </form>
+    )
+  }
+
+  if (twoFactorChallengeId) {
+    return (
+      <form onSubmit={verifyTwoFactor} className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <ShieldCheck className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-500">Connexion en 2 étapes</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Entrez le code de vérification</h2>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-slate-600">
+          Un code à 6 chiffres a été envoyé à {twoFactorEmail ?? "votre courriel"}. Il expire dans 10 minutes.
+        </p>
+
+        <label className="mt-5 grid gap-1.5 text-sm font-medium text-slate-800">
+          Code de vérification
+          <input
+            value={twoFactorCode}
+            onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            className="h-12 rounded-lg border border-slate-200 bg-white px-3 text-center text-xl font-semibold tracking-[0.35em] outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+            placeholder="000000"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+          />
+        </label>
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+            {error}
+          </div>
+        ) : null}
+
+        {resetMessage ? (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900">
+            {resetMessage}
+          </div>
+        ) : null}
+
+        <Button type="submit" disabled={isVerifyingTwoFactor} className="mt-5 w-full rounded-lg bg-slate-950 hover:bg-slate-800">
+          {isVerifyingTwoFactor ? <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" /> : null}
+          Vérifier et entrer
+        </Button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setTwoFactorChallengeId(null)
+            setTwoFactorCode("")
+            setResetMessage(null)
+            setError(null)
+          }}
+          className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          Revenir au mot de passe
+        </button>
+      </form>
     )
   }
 
@@ -251,14 +472,14 @@ export function InternalAuthCard({
         {!isSubmitting ? <ArrowRight className="ml-2 size-4" aria-hidden="true" /> : null}
       </Button>
 
-      {mode === "sign-in" && role !== "client" ? (
+      {mode === "sign-in" ? (
         <button
           type="button"
           onClick={resetPassword}
           disabled={isResettingPassword}
           className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isResettingPassword ? "Réinitialisation..." : "Réinitialiser le mot de passe"}
+          {isResettingPassword ? "Envoi du lien..." : "Recevoir un lien de réinitialisation"}
         </button>
       ) : null}
 

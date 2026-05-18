@@ -1,10 +1,10 @@
-import { scrypt } from "node:crypto"
+import { createHmac, randomBytes, randomInt, randomUUID, scrypt, timingSafeEqual } from "node:crypto"
 import { promisify } from "node:util"
-import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto"
 import { cookies } from "next/headers"
 import type { User, UserRole } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
+import { sendTransactionalEmail } from "@/lib/email/send"
 import {
   normalizeSaasAppRole,
   organizationNameForAppRole,
@@ -26,6 +26,10 @@ const scryptAsync = promisify(scrypt)
 const SESSION_COOKIE = "finadvisor_internal_session"
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 const MIN_PASSWORD_LENGTH = 8
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000
+const TWO_FACTOR_TTL_MS = 10 * 60 * 1000
+const MAX_FAILED_AUTH_ATTEMPTS = 5
+const AUTH_LOCK_MS = 15 * 60 * 1000
 
 type InternalSessionPayload = {
   userId: string
@@ -42,6 +46,23 @@ type ResolveInternalUserInput = {
   subscriptionPricingMode?: SubscriptionPricingModeKey
   subscriptionCurrency?: SubscriptionCurrencyKey
   mode?: "sign-in" | "sign-up"
+}
+
+type PasswordResetInput = {
+  email: string
+  role?: SaasAppRole
+}
+
+type CompletePasswordResetInput = {
+  token: string
+  password: string
+  role?: SaasAppRole
+}
+
+type TwoFactorChallengeInput = {
+  challengeId: string
+  code: string
+  role?: SaasAppRole
 }
 
 function authSecret() {
@@ -62,6 +83,32 @@ function base64UrlJson(value: unknown) {
 
 function signPayload(payload: string) {
   return createHmac("sha256", authSecret()).update(payload).digest("base64url")
+}
+
+function hashAuthToken(value: string) {
+  return createHmac("sha256", authSecret()).update(value).digest("base64url")
+}
+
+function safeTokenEquals(left: string, right: string) {
+  const leftBuffer = Buffer.from(left)
+  const rightBuffer = Buffer.from(right)
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
+}
+
+function appBaseUrl() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000"
+  return configured.replace(/\/+$/, "")
+}
+
+function createSixDigitCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0")
+}
+
+function maskEmail(email: string) {
+  const [name, domain] = email.split("@")
+  if (!name || !domain) return email
+  const visible = name.slice(0, Math.min(2, name.length))
+  return `${visible}${"*".repeat(Math.max(2, name.length - visible.length))}@${domain}`
 }
 
 function verifySessionValue(value: string): InternalSessionPayload | null {
@@ -149,6 +196,261 @@ async function verifyInternalPassword(password: string, salt: string, hash: stri
   const stored = Buffer.from(hash, "base64url")
 
   return stored.length === derived.length && timingSafeEqual(stored, derived)
+}
+
+async function recordInternalAuthFailure(credential: { id: string; failedLoginCount: number }) {
+  const failedLoginCount = credential.failedLoginCount + 1
+  const shouldLock = failedLoginCount >= MAX_FAILED_AUTH_ATTEMPTS
+
+  await prisma.internalAuthCredential.update({
+    where: { id: credential.id },
+    data: {
+      failedLoginCount,
+      lockedUntil: shouldLock ? new Date(Date.now() + AUTH_LOCK_MS) : null,
+    },
+  })
+}
+
+function assertCredentialNotLocked(credential: { lockedUntil: Date | null }) {
+  if (credential.lockedUntil && credential.lockedUntil.getTime() > Date.now()) {
+    throw new Error("Compte temporairement verrouillé après plusieurs essais. Réessayez dans 15 minutes.")
+  }
+}
+
+export async function requestInternalPasswordReset({ email: rawEmail, role }: PasswordResetInput) {
+  const email = normalizeEmail(rawEmail)
+  const appRole = normalizeSaasAppRole(role)
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Entre d’abord un courriel valide.")
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { internalCredential: true },
+  })
+
+  if (!user || !user.internalCredential || !requestedRoleMatchesUser(appRole, user.role)) {
+    return { sent: true }
+  }
+
+  const token = randomBytes(32).toString("base64url")
+  const tokenHash = hashAuthToken(token)
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS)
+  const params = new URLSearchParams()
+  params.set("role", appRole)
+  params.set("email", email)
+  params.set("reset_token", token)
+  const resetUrl = `${appBaseUrl()}/sign-in?${params.toString()}`
+
+  await prisma.internalAuthCredential.update({
+    where: { id: user.internalCredential.id },
+    data: {
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpiresAt: expiresAt,
+      passwordResetRequestedAt: new Date(),
+      twoFactorChallengeHash: null,
+      twoFactorCodeHash: null,
+      twoFactorExpiresAt: null,
+      twoFactorRequestedAt: null,
+    },
+  })
+
+  await sendTransactionalEmail({
+    to: email,
+    subject: "Réinitialisation de votre mot de passe FinAssuro",
+    text: [
+      "Bonjour,",
+      "",
+      "Vous avez demandé la réinitialisation de votre mot de passe FinAssuro.",
+      `Lien sécurisé: ${resetUrl}`,
+      "",
+      "Ce lien expire dans 30 minutes. Si vous n’êtes pas à l’origine de cette demande, ignorez ce courriel.",
+    ].join("\n"),
+    html: `
+      <p>Bonjour,</p>
+      <p>Vous avez demandé la réinitialisation de votre mot de passe FinAssuro.</p>
+      <p><a href="${resetUrl}">Réinitialiser mon mot de passe</a></p>
+      <p>Ce lien expire dans 30 minutes. Si vous n’êtes pas à l’origine de cette demande, ignorez ce courriel.</p>
+    `,
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: "PASSWORD_RESET_REQUESTED",
+      entityType: "User",
+      entityId: user.id,
+      newValue: { email: user.email, role: user.role },
+    },
+  }).catch(() => null)
+
+  return { sent: true }
+}
+
+export async function resetInternalPasswordWithToken({ token, password, role }: CompletePasswordResetInput) {
+  const appRole = normalizeSaasAppRole(role)
+  const passwordError = validateInternalPassword(password)
+
+  if (passwordError) {
+    throw new Error(passwordError)
+  }
+
+  if (!token || token.length < 24) {
+    throw new Error("Lien de réinitialisation invalide.")
+  }
+
+  const tokenHash = hashAuthToken(token)
+  const credential = await prisma.internalAuthCredential.findFirst({
+    where: { passwordResetTokenHash: tokenHash },
+    include: { user: true },
+  })
+
+  if (
+    !credential ||
+    !credential.passwordResetExpiresAt ||
+    credential.passwordResetExpiresAt.getTime() < Date.now() ||
+    !requestedRoleMatchesUser(appRole, credential.user.role)
+  ) {
+    throw new Error("Lien de réinitialisation expiré ou invalide.")
+  }
+
+  const passwordPayload = await hashInternalPassword(password)
+
+  await prisma.internalAuthCredential.update({
+    where: { id: credential.id },
+    data: {
+      ...passwordPayload,
+      passwordUpdatedAt: new Date(),
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+      passwordResetRequestedAt: null,
+      twoFactorChallengeHash: null,
+      twoFactorCodeHash: null,
+      twoFactorExpiresAt: null,
+      twoFactorRequestedAt: null,
+      failedLoginCount: 0,
+      lockedUntil: null,
+    },
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: credential.user.organizationId,
+      userId: credential.user.id,
+      action: "PASSWORD_RESET_COMPLETED",
+      entityType: "User",
+      entityId: credential.user.id,
+      newValue: { email: credential.user.email, role: credential.user.role },
+    },
+  }).catch(() => null)
+
+  return { ok: true }
+}
+
+export async function startInternalTwoFactorChallenge(user: User) {
+  const credential = await prisma.internalAuthCredential.findUnique({
+    where: { userId: user.id },
+  })
+
+  if (!credential) {
+    throw new Error("Aucun mot de passe interne n’est configuré.")
+  }
+
+  assertCredentialNotLocked(credential)
+
+  const challengeId = randomBytes(24).toString("base64url")
+  const code = createSixDigitCode()
+  const expiresAt = new Date(Date.now() + TWO_FACTOR_TTL_MS)
+
+  await prisma.internalAuthCredential.update({
+    where: { id: credential.id },
+    data: {
+      twoFactorChallengeHash: hashAuthToken(challengeId),
+      twoFactorCodeHash: hashAuthToken(code),
+      twoFactorExpiresAt: expiresAt,
+      twoFactorRequestedAt: new Date(),
+      failedLoginCount: 0,
+      lockedUntil: null,
+    },
+  })
+
+  await sendTransactionalEmail({
+    to: user.email,
+    subject: "Code de connexion FinAssuro",
+    text: [
+      "Bonjour,",
+      "",
+      `Votre code de connexion FinAssuro est: ${code}`,
+      "",
+      "Ce code expire dans 10 minutes. Ne le partagez avec personne.",
+    ].join("\n"),
+    html: `
+      <p>Bonjour,</p>
+      <p>Votre code de connexion FinAssuro est :</p>
+      <p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p>
+      <p>Ce code expire dans 10 minutes. Ne le partagez avec personne.</p>
+    `,
+  })
+
+  return {
+    challengeId,
+    expiresAt,
+    email: maskEmail(user.email),
+  }
+}
+
+export async function verifyInternalTwoFactorChallenge({ challengeId, code, role }: TwoFactorChallengeInput) {
+  const appRole = normalizeSaasAppRole(role)
+  const normalizedCode = code.replace(/\D/g, "")
+
+  if (!challengeId || normalizedCode.length !== 6) {
+    throw new Error("Code de vérification invalide.")
+  }
+
+  const credential = await prisma.internalAuthCredential.findFirst({
+    where: { twoFactorChallengeHash: hashAuthToken(challengeId) },
+    include: { user: true },
+  })
+
+  if (!credential) {
+    throw new Error("Code de vérification expiré ou invalide.")
+  }
+
+  assertCredentialNotLocked(credential)
+
+  if (
+    !credential.twoFactorCodeHash ||
+    !credential.twoFactorExpiresAt ||
+    credential.twoFactorExpiresAt.getTime() < Date.now() ||
+    !requestedRoleMatchesUser(appRole, credential.user.role)
+  ) {
+    throw new Error("Code de vérification expiré ou invalide.")
+  }
+
+  const providedHash = hashAuthToken(normalizedCode)
+
+  if (!safeTokenEquals(providedHash, credential.twoFactorCodeHash)) {
+    await recordInternalAuthFailure(credential)
+    throw new Error("Code de vérification invalide.")
+  }
+
+  await prisma.internalAuthCredential.update({
+    where: { id: credential.id },
+    data: {
+      twoFactorChallengeHash: null,
+      twoFactorCodeHash: null,
+      twoFactorExpiresAt: null,
+      twoFactorRequestedAt: null,
+      failedLoginCount: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date(),
+      lastTwoFactorAt: new Date(),
+    },
+  })
+
+  return credential.user
 }
 
 async function findClientForPortalSignup(email: string, redirectUrl?: string) {
@@ -323,7 +625,7 @@ export async function resolveInternalAuthUser({
   }
 
   if (passwordError) {
-    throw new Error(passwordError)
+    throw new Error(mode === "sign-in" ? "Courriel ou mot de passe invalide." : passwordError)
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -367,6 +669,8 @@ export async function resolveInternalAuthUser({
     throw new Error("Cet utilisateur existe, mais aucun mot de passe interne n’est configuré.")
   }
 
+  assertCredentialNotLocked(existingUser.internalCredential)
+
   const isValid = await verifyInternalPassword(
     password,
     existingUser.internalCredential.passwordSalt,
@@ -374,6 +678,7 @@ export async function resolveInternalAuthUser({
   )
 
   if (!isValid) {
+    await recordInternalAuthFailure(existingUser.internalCredential)
     throw new Error("Courriel ou mot de passe invalide.")
   }
 

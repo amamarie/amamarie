@@ -2059,6 +2059,17 @@ model InternalAuthCredential {
   passwordHash      String
   passwordSalt      String
   passwordUpdatedAt DateTime @default(now())
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
+  passwordResetRequestedAt DateTime?
+  twoFactorChallengeHash String?
+  twoFactorCodeHash      String?
+  twoFactorExpiresAt     DateTime?
+  twoFactorRequestedAt   DateTime?
+  failedLoginCount       Int      @default(0)
+  lockedUntil            DateTime?
+  lastLoginAt            DateTime?
+  lastTwoFactorAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

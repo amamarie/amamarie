@@ -4,7 +4,7 @@ import { normalizeSaasAppRole } from "@/lib/auth/app-roles"
 import {
   requestedRoleMatchesUser,
   resolveInternalAuthUser,
-  setInternalSessionCookie,
+  startInternalTwoFactorChallenge,
 } from "@/lib/auth/internal"
 import { isInternalAuthEnabled } from "@/lib/auth-config"
 import { normalizeSubscriptionCurrency, normalizeSubscriptionPlan, normalizeSubscriptionPricingMode } from "@/lib/billing/plans"
@@ -51,19 +51,28 @@ export async function POST(request: Request) {
       )
     }
 
-    await setInternalSessionCookie(user.id)
+    const challenge = await startInternalTwoFactorChallenge(user)
 
     return NextResponse.json({
       ok: true,
+      requiresTwoFactor: true,
+      challengeId: challenge.challengeId,
+      expiresAt: challenge.expiresAt.toISOString(),
+      email: challenge.email,
       redirectUrl: redirectUrl ?? "/post-auth",
     })
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Connexion impossible."
+    const isEmailError = message === "EMAIL_NOT_CONFIGURED" || message.startsWith("EMAIL_SEND_FAILED:")
+
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "Connexion impossible.",
+        error: isEmailError
+          ? "Connexion validée, mais l’envoi du code de vérification a échoué. Vérifiez la configuration courriel."
+          : message,
       },
-      { status: 400 }
+      { status: isEmailError ? 503 : 400 }
     )
   }
 }
