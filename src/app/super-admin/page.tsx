@@ -20,7 +20,7 @@ export default async function SuperAdminDashboardPage() {
       <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <SuperAdminIntro
           title="Centre de pilotage SaaS"
-          description="Vue interne pour suivre les clients, les revenus, le support, les risques et les opérations sensibles de FinAdvisor."
+          description="Vue interne pour suivre les clients, les revenus, le support, les risques et les opérations sensibles de FinAssuro."
         >
           <div className="grid gap-2 sm:grid-cols-3">
             <IntroStat label="Revenu mensuel récurrent" value={currencyFromCents(data.finance.mrrEstimateCents)} />

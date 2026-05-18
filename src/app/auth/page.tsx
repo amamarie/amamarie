@@ -38,7 +38,7 @@ export default function AuthChoicePage() {
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
             <span>
-              <span className="block text-sm font-semibold">FinAdvisor</span>
+              <span className="block text-sm font-semibold">FinAssuro</span>
               <span className="block text-xs text-slate-500">Authentification SaaS</span>
             </span>
           </Link>
@@ -53,7 +53,7 @@ export default function AuthChoicePage() {
           <p className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
             Choix obligatoire
           </p>
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">Choisissez votre espace FinAdvisor.</h1>
+          <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">Choisissez votre espace FinAssuro.</h1>
           <p className="mt-4 text-base leading-7 text-slate-600">
             Chaque rôle ouvre une plateforme différente: client, conseiller ou développeur. La connexion et la création de compte conservent ce choix.
           </p>

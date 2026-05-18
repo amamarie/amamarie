@@ -188,7 +188,7 @@ function clientIdFromRedirectUrl(redirectUrl?: string) {
   if (!redirectUrl?.startsWith("/")) return null
 
   try {
-    return new URL(redirectUrl, "https://finadvisor.local").searchParams.get("clientId")
+    return new URL(redirectUrl, "https://finassuro.local").searchParams.get("clientId")
   } catch {
     return null
   }

@@ -167,7 +167,7 @@ export function CommunicationsPageClient() {
 
   async function deleteSelectedCorrespondentsCommunications() {
     if (selectedCorrespondents.length === 0) return
-    const confirmed = window.confirm(`Effacer les communications de ${selectedCorrespondents.length} correspondant(s) sélectionné(s) ? Cette action retire leurs SMS, appels et courriels de FinAdvisor.`)
+    const confirmed = window.confirm(`Effacer les communications de ${selectedCorrespondents.length} correspondant(s) sélectionné(s) ? Cette action retire leurs SMS, appels et courriels de FinAssuro.`)
     if (!confirmed) return
 
     setIsDeletingConversations(true)

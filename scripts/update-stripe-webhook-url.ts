@@ -77,7 +77,7 @@ async function stripeRequest<T>(pathName: string, body?: URLSearchParams, init?:
   return json as T
 }
 
-function isFinAdvisorWebhook(endpoint: StripeWebhookEndpoint) {
+function isFinAssuroWebhook(endpoint: StripeWebhookEndpoint) {
   return endpoint.url.includes("/api/webhooks/stripe")
     || endpoint.url.includes("app-crm-conseiller")
     || endpoint.url.includes("finassuro.com")
@@ -87,14 +87,14 @@ function isFinAdvisorWebhook(endpoint: StripeWebhookEndpoint) {
 async function main() {
   const list = await stripeRequest<StripeList<StripeWebhookEndpoint>>("/webhook_endpoints?limit=100")
   const finassuroEndpoint = list.data.find((endpoint) => endpoint.url === targetUrl)
-  const existingEndpoint = finassuroEndpoint ?? list.data.find(isFinAdvisorWebhook)
+  const existingEndpoint = finassuroEndpoint ?? list.data.find(isFinAssuroWebhook)
 
   const params = new URLSearchParams()
   params.set("url", targetUrl)
   events.forEach((event, index) => params.set(`enabled_events[${index}]`, event))
 
   if (recreate) {
-    for (const endpoint of list.data.filter(isFinAdvisorWebhook)) {
+    for (const endpoint of list.data.filter(isFinAssuroWebhook)) {
       await stripeRequest(`/webhook_endpoints/${endpoint.id}`, undefined, { method: "DELETE" })
     }
   } else if (existingEndpoint) {

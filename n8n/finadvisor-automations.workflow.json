@@ -1,5 +1,5 @@
 {
-  "name": "FinAdvisor CRM - Automatisations internes",
+  "name": "FinAssuro CRM - Automatisations internes",
   "nodes": [
     {
       "parameters": {
@@ -9,7 +9,7 @@
         "options": {}
       },
       "id": "finadvisor-webhook",
-      "name": "Webhook FinAdvisor",
+      "name": "Webhook FinAssuro",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [-760, 0],
@@ -126,7 +126,7 @@
         "options": {}
       },
       "id": "callback-lead-task",
-      "name": "Créer/valider tâche prospect dans FinAdvisor",
+      "name": "Créer/valider tâche prospect dans FinAssuro",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [-220, -180]
@@ -154,7 +154,7 @@
         "options": {}
       },
       "id": "callback-client-task",
-      "name": "Créer/valider tâche onboarding dans FinAdvisor",
+      "name": "Créer/valider tâche onboarding dans FinAssuro",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [-220, 0]
@@ -182,7 +182,7 @@
         "options": {}
       },
       "id": "callback-document-task",
-      "name": "Créer/valider tâche document dans FinAdvisor",
+      "name": "Créer/valider tâche document dans FinAssuro",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [-220, 180]
@@ -190,18 +190,18 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"ok\": true,\n  \"workflowKey\": \"{{ $('Webhook FinAdvisor').item.json.params.workflowKey }}\",\n  \"message\": \"Automatisation FinAdvisor reçue\"\n}",
+        "responseBody": "={\n  \"ok\": true,\n  \"workflowKey\": \"{{ $('Webhook FinAssuro').item.json.params.workflowKey }}\",\n  \"message\": \"Automatisation FinAssuro reçue\"\n}",
         "options": {}
       },
       "id": "response-ok",
-      "name": "Réponse FinAdvisor",
+      "name": "Réponse FinAssuro",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [80, 0]
     }
   ],
   "connections": {
-    "Webhook FinAdvisor": {
+    "Webhook FinAssuro": {
       "main": [
         [
           {
@@ -216,61 +216,61 @@
       "main": [
         [
           {
-            "node": "Créer/valider tâche prospect dans FinAdvisor",
+            "node": "Créer/valider tâche prospect dans FinAssuro",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Créer/valider tâche onboarding dans FinAdvisor",
+            "node": "Créer/valider tâche onboarding dans FinAssuro",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Créer/valider tâche document dans FinAdvisor",
+            "node": "Créer/valider tâche document dans FinAssuro",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Réponse FinAdvisor",
+            "node": "Réponse FinAssuro",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer/valider tâche prospect dans FinAdvisor": {
+    "Créer/valider tâche prospect dans FinAssuro": {
       "main": [
         [
           {
-            "node": "Réponse FinAdvisor",
+            "node": "Réponse FinAssuro",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer/valider tâche onboarding dans FinAdvisor": {
+    "Créer/valider tâche onboarding dans FinAssuro": {
       "main": [
         [
           {
-            "node": "Réponse FinAdvisor",
+            "node": "Réponse FinAssuro",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer/valider tâche document dans FinAdvisor": {
+    "Créer/valider tâche document dans FinAssuro": {
       "main": [
         [
           {
-            "node": "Réponse FinAdvisor",
+            "node": "Réponse FinAssuro",
             "type": "main",
             "index": 0
           }

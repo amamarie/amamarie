@@ -283,7 +283,7 @@ function createSimplePdf(lines: string[]) {
       "/F2 13 Tf",
       "50 805 Td",
       "15 TL",
-      `(FINADVISOR CRM - Rapport d'analyse des besoins) Tj T*`,
+      `(FINASSURO CRM - Rapport d'analyse des besoins) Tj T*`,
       "/F1 8 Tf",
       `(Page ${pageIndex + 1} / ${pageCount}) Tj T*`,
       "0 -14 Td",
@@ -2445,7 +2445,7 @@ export async function sendInsuranceNeedsSmartDocumentRequests({
       documents: suggestions.map((document) => ({
         type: inferDocumentType(document.name),
         name: document.name,
-        description: `${document.reason} Source: aide intelligente FinAdvisor. Validation humaine obligatoire.`,
+        description: `${document.reason} Source: aide intelligente FinAssuro. Validation humaine obligatoire.`,
       })),
     },
   })
@@ -2645,7 +2645,7 @@ export async function generateInsuranceNeedsReport({
     : []
 
   const reportText = [
-    "FINADVISOR CRM",
+    "FINASSURO CRM",
     `RAPPORT D'ANALYSE DES BESOINS - ${label.toUpperCase()}`,
     `Document date: ${new Intl.DateTimeFormat("fr-CA").format(new Date())}`,
     `Version analyse: v${nextAnalysisVersion}`,

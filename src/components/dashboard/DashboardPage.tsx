@@ -441,7 +441,7 @@ export function DashboardPage() {
         <div className="border-b-2 border-emerald-100 bg-white p-5">
           <div className="grid gap-5 xl:grid-cols-[1fr_300px] xl:items-stretch">
             <div className="rounded-[1.75rem] border-2 border-emerald-200 bg-emerald-500 p-5 text-white shadow-[0_8px_0_#16a34a]">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Centre de pilotage FinAdvisor</p>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Centre de pilotage FinAssuro</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-black tracking-tight sm:text-4xl">Priorités, prospects, tâches et conformité au même endroit</h1>
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
                 Le dashboard relie les prospects, clients, documents, alertes et suivis pour guider la journée du conseiller sans disperser l’information.

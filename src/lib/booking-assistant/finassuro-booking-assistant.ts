@@ -365,7 +365,7 @@ async function createOrUpdateAppointmentProposal({
 }) {
   const slots = buildAppointmentSlots()
   const description = [
-    "Assistant FinAdvisor - créneaux proposés",
+    "Assistant FinAssuro - créneaux proposés",
     `Service: ${service}`,
     serializeSlots(slots),
     "Réponse attendue: 1, 2 ou 3.",
@@ -454,7 +454,7 @@ async function createConfirmedAppointment({
     userId,
     data: {
       title: `${confirmedAppointmentTitle} - ${name}`,
-      description: `Rendez-vous confirmé automatiquement par FinAdvisor pour ${service}.`,
+      description: `Rendez-vous confirmé automatiquement par FinAssuro pour ${service}.`,
       type: "MEETING",
       status: "TODO",
       priority: "HIGH",
@@ -498,7 +498,7 @@ async function createConfirmedAppointment({
     clientId,
     taskId: task.id,
     type: "AUTOMATION_EXECUTED",
-    title: "Rendez-vous FinAdvisor confirmé",
+    title: "Rendez-vous FinAssuro confirmé",
     description: `${name} - ${formatSlot(selectedSlot.startsAt)}`,
     entityType: "Task",
     entityId: task.id,
@@ -561,7 +561,7 @@ function buildReply({
   const greeting = firstName && firstName !== "Nouveau" ? `Merci ${firstName}.` : "Merci pour votre message."
 
   if (confirmed) {
-    return `${greeting} Votre demande de rendez-vous est confirmée côté FinAdvisor. Un conseiller valide le créneau et vous revient rapidement.`
+    return `${greeting} Votre demande de rendez-vous est confirmée côté FinAssuro. Un conseiller valide le créneau et vous revient rapidement.`
   }
 
   if (!service || !hasEmail) {
@@ -569,13 +569,13 @@ function buildReply({
   }
 
   if (slots?.length) {
-    return `${greeting} Voici les prochains créneaux FinAdvisor:\n${formatSlotList(slots)}\nRépondez 1, 2 ou 3 pour confirmer.`
+    return `${greeting} Voici les prochains créneaux FinAssuro:\n${formatSlotList(slots)}\nRépondez 1, 2 ou 3 pour confirmer.`
   }
 
   return `${greeting} Votre demande pour ${service} est reçue. Un conseiller vous proposera les meilleurs créneaux disponibles sous peu.`
 }
 
-export async function runFinadvisorBookingAssistant(input: BookingAssistantInput): Promise<BookingAssistantResult> {
+export async function runFinassuroBookingAssistant(input: BookingAssistantInput): Promise<BookingAssistantResult> {
   const subjectId = input.leadId ?? input.clientId ?? null
   const pendingTask = subjectId
     ? await getPendingAppointmentTask({
@@ -645,7 +645,7 @@ export async function runFinadvisorBookingAssistant(input: BookingAssistantInput
 
     return {
       handled: true,
-      reply: `Parfait, votre rendez-vous FinAdvisor est confirmé pour ${formatSlot(selectedSlot.startsAt)}. Un conseiller vous contactera au numéro utilisé pour ce message.`,
+      reply: `Parfait, votre rendez-vous FinAssuro est confirmé pour ${formatSlot(selectedSlot.startsAt)}. Un conseiller vous contactera au numéro utilisé pour ce message.`,
       leadId: input.leadId,
       clientId: input.clientId,
       taskIds,
@@ -689,7 +689,7 @@ export async function runFinadvisorBookingAssistant(input: BookingAssistantInput
         leadId: input.leadId,
         clientId: input.clientId,
         type: "AUTOMATION_EXECUTED",
-        title: "Créneaux FinAdvisor proposés",
+        title: "Créneaux FinAssuro proposés",
         description: `${effectiveName} - ${service}`,
         entityType: "Task",
         entityId: proposal.taskId,
@@ -736,7 +736,7 @@ export async function runFinadvisorBookingAssistant(input: BookingAssistantInput
     leadId: input.leadId,
     clientId: input.clientId,
     type: "AUTOMATION_EXECUTED",
-    title: "Assistant RDV FinAdvisor",
+    title: "Assistant RDV FinAssuro",
     description: input.body.slice(0, 160),
     entityType: "SMSMessage",
     entityId: input.smsId,

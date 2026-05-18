@@ -5,7 +5,7 @@ import "./globals.css"
 import { isClerkAuthEnabled } from "@/lib/auth-config"
 
 export const metadata: Metadata = {
-  title: "FinAdvisor CRM",
+  title: "FinAssuro CRM",
   description:
     "CRM professionnel pour conseillers en assurance et produits financiers.",
 }

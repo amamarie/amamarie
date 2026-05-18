@@ -42,7 +42,7 @@ function isEmailAddress(value?: string | null) {
 }
 
 function formatEmailAddress(name: string | null | undefined, email: string) {
-  const displayName = (name || "Conseiller FinAdvisor").replaceAll('"', "")
+  const displayName = (name || "Conseiller FinAssuro").replaceAll('"', "")
   return `${displayName} <${email}>`
 }
 

@@ -358,7 +358,7 @@ export function PublicBookingPage({
           <div className="grid size-14 place-items-center rounded-2xl border-2 border-emerald-200 bg-emerald-50 text-emerald-700 shadow-[0_4px_0_#d9f99d]">
             <CalendarDays className="size-7" />
           </div>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">{data.advisor.organization?.name ?? "FinAdvisor CRM"}</p>
+          <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">{data.advisor.organization?.name ?? "FinAssuro CRM"}</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Réserver un rendez-vous</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
             Choisissez un créneau publié par le conseiller ou proposez vos disponibilités. Votre demande sera envoyée au cabinet.

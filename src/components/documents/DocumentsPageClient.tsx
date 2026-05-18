@@ -831,7 +831,7 @@ export function DocumentsPageClient() {
   }
 
   function copyDepositEmail() {
-    void navigator.clipboard?.writeText("documents@finadvisor.local")
+    void navigator.clipboard?.writeText("documents@finassuro.local")
     setNotice({ type: "success", message: "Email de dépôt copié. Les dépôts par email demanderont une validation humaine." })
   }
 
@@ -2154,7 +2154,7 @@ function UploadModal({ folders, clients, currentFolderId, isSaving, onClose, onU
   }
 
   return (
-    <Modal title="Importer des documents" subtitle="Choisissez le client. Sans sous-dossier précis, FinAdvisor classe automatiquement dans le dossier principal du client." onClose={onClose}>
+    <Modal title="Importer des documents" subtitle="Choisissez le client. Sans sous-dossier précis, FinAssuro classe automatiquement dans le dossier principal du client." onClose={onClose}>
       <form onSubmit={submit} className="grid gap-4">
         <SelectLabel label="Client" name="client_id" value={clientId} onChange={changeClient} options={clients.map((client) => ({ value: client.id, label: clientName(client) }))} />
         <SelectLabel

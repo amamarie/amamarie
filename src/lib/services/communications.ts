@@ -1,6 +1,6 @@
 import type { CallStatus, CommunicationDirection, CommunicationStatus, Prisma } from "@prisma/client"
 
-import { runFinadvisorBookingAssistant } from "@/lib/booking-assistant/finadvisor-booking-assistant"
+import { runFinassuroBookingAssistant } from "@/lib/booking-assistant/finassuro-booking-assistant"
 import { createCrmActivity, runAutomationsForEvent } from "@/lib/crm-events"
 import { prisma } from "@/lib/prisma"
 import { assertActivePurposeConsent } from "@/lib/privacy/service"
@@ -427,7 +427,7 @@ export async function handleVoicemailRecording({
       clientId: call.clientId,
       from: settings.twilioPhoneNumber,
       to: settings.advisorSmsNotificationNumber,
-      body: `FinAdvisor: message vocal de ${caller} (${durationLabel}). Tâche de rappel créée. ${absoluteActionUrl(actionPath)}`,
+      body: `FinAssuro: message vocal de ${caller} (${durationLabel}). Tâche de rappel créée. ${absoluteActionUrl(actionPath)}`,
     })
   } catch (error) {
     await createCrmActivity({
@@ -524,7 +524,7 @@ export async function handleIncomingSms({ from, to, body, messageSid }: { from: 
       })
     : null
 
-  const assistant = await runFinadvisorBookingAssistant({
+  const assistant = await runFinassuroBookingAssistant({
     organizationId,
     advisorId,
     leadId,

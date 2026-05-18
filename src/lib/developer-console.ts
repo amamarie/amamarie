@@ -14,7 +14,7 @@ import { currentQuotaPeriod, getQuotaLimits, parseJsonStringArray } from "@/lib/
 import { getSubscriptionPlanPriceOverrides } from "@/lib/platform-settings"
 import { prisma } from "@/lib/prisma"
 
-export const TEMPORARY_ADVISOR_PASSWORD = "FinAdvisor2026"
+export const TEMPORARY_ADVISOR_PASSWORD = "FinAssuro2026"
 
 export const apiKeys = [
   { name: "Site web cabinet", environment: "Production", permissions: "Contacts, RDV", lastUsed: "il y a 2 h", createdAt: "03/05/2026", status: "Active", tone: "emerald" as const },

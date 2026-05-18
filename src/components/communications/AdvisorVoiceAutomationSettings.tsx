@@ -25,7 +25,7 @@ const sampleVariables = {
   first_name: "Marc",
   last_name: "Tremblay",
   advisor_name: "Marie Aubergiste",
-  advisor_booking_link: "https://finadvisor.app/rendez-vous/marie",
+  advisor_booking_link: "https://finassuro.com/rendez-vous/marie",
   advisor_specialties: "assurance vie, retraite, planification financiere",
 }
 

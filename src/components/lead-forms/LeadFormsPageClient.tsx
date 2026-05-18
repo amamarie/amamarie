@@ -167,7 +167,7 @@ export function LeadFormsPageClient() {
       }))
       form.reset()
       setModalOpen(false)
-      setNotice({ type: "success", message: "Formulaire créé. FinAdvisor crée aussi le Google Sheet si Google Workspace est connecté." })
+      setNotice({ type: "success", message: "Formulaire créé. FinAssuro crée aussi le Google Sheet si Google Workspace est connecté." })
       await loadForms()
     } catch (error) {
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Impossible de créer le formulaire." })
@@ -279,7 +279,7 @@ export function LeadFormsPageClient() {
               <p className="text-sm font-black uppercase tracking-wide text-emerald-700">Formulaires publics</p>
               <h2 className="mt-3 text-2xl font-black text-slate-950">Un lien par conseiller ou cabinet</h2>
               <p className="mt-2 max-w-2xl text-sm font-bold leading-6 text-emerald-900">
-                Le client remplit le formulaire, FinAdvisor crée le prospect, assigne le conseiller, crée une tâche et synchronise Google Sheets si configuré.
+                Le client remplit le formulaire, FinAssuro crée le prospect, assigne le conseiller, crée une tâche et synchronise Google Sheets si configuré.
               </p>
             </div>
             <Button className="rounded-full bg-emerald-600 font-black hover:bg-emerald-700" onClick={() => setModalOpen(true)}>
@@ -291,7 +291,7 @@ export function LeadFormsPageClient() {
         <ContentCard title="URL professionnelle">
           <div className="space-y-3 text-sm font-semibold text-slate-600">
             <p>Développement : <span className="text-slate-950">/f/slug/contact</span></p>
-            <p>Production prévue : <span className="text-slate-950">conseiller.finadvisor.ca/contact</span></p>
+            <p>Production prévue : <span className="text-slate-950">conseiller.finassuro.com/contact</span></p>
             <p className="text-xs leading-5 text-slate-500">Le slug permet déjà d’isoler le bon conseiller. Le sous-domaine sera branché au DNS en production.</p>
           </div>
         </ContentCard>

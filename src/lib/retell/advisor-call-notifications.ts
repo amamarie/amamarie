@@ -59,7 +59,7 @@ export async function generateAdvisorCallBrief({
     brief: summary?.trim() || `Nouvel appel de ${callerName}${callerPhone ? ` (${callerPhone})` : ""}.`,
     urgency: urgency || "normale",
     nextAction: nextAction?.trim() || "Ouvrir le dossier et rappeler le client si nécessaire.",
-    sms: truncateSms(`FinAdvisor: appel de ${callerName}. ${nextAction || "Ouvrir le dossier."} ${appUrl(actionUrl)}`),
+    sms: truncateSms(`FinAssuro: appel de ${callerName}. ${nextAction || "Ouvrir le dossier."} ${appUrl(actionUrl)}`),
   }
 
   return runAI({

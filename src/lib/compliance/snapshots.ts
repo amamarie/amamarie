@@ -267,7 +267,7 @@ export async function createKycSnapshot({
   const summary = snapshotPayload.summary
   const clientName = fullName(client)
   const reportText = [
-    "FINADVISOR CRM",
+    "FINASSURO CRM",
     "RAPPORT PROFIL CLIENT",
     `Document date: ${new Intl.DateTimeFormat("fr-CA").format(capturedAt)}`,
     `Client: ${clientName}`,

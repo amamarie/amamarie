@@ -153,7 +153,7 @@ export function buildAdvisorEmailSignature(profile: Partial<AdvisorProfile>) {
   return [
     displayName,
     title,
-    "FinAdvisor CRM",
+    "FinAssuro CRM",
     contactParts.join(" · "),
   ].filter(Boolean).join("\n")
 }

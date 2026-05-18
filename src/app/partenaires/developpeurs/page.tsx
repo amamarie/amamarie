@@ -11,7 +11,7 @@ export default function PartnerDeveloperPortalPage() {
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-10 sm:px-6 lg:px-8">
         <div className="rounded-[28px] border-2 border-slate-200 bg-white p-6 shadow-[0_8px_0_#e2e8f0]">
           <p className="text-sm font-black uppercase text-violet-700">Portail partenaires</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Connecter FinAdvisor à un site, un back-office ou une automatisation</h1>
+          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Connecter FinAssuro à un site, un back-office ou une automatisation</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
             Utilisez les clés API, OAuth 2.0 client_credentials, webhooks signés et la sandbox pour tester une intégration sans toucher aux vraies données client.
           </p>

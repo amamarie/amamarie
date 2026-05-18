@@ -493,7 +493,7 @@ export async function generateDocumentedRecommendationReport({ id, organizationI
   const currentSituation = asRecord(recommendation.currentSituation)
   const recommendedSolution = asRecord(recommendation.recommendedSolution)
   const lines = [
-    "FINADVISOR CRM",
+    "FINASSURO CRM",
     "RAPPORT DE RECOMMANDATION DOCUMENTEE",
     `Document date: ${new Intl.DateTimeFormat("fr-CA").format(generatedAt)}`,
     `Version recommandation: v${recommendation.recommendationVersion}`,

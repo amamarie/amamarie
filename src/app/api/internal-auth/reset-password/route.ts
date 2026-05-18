@@ -8,7 +8,7 @@ import {
 import { isInternalAuthEnabled } from "@/lib/auth-config"
 import { prisma } from "@/lib/prisma"
 
-const TEMPORARY_PASSWORD = "FinAdvisor2026"
+const TEMPORARY_PASSWORD = "FinAssuro2026"
 
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production" || !isInternalAuthEnabled()) {

@@ -98,7 +98,7 @@ export default async function PortalHomePage() {
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
             <span>
-              <span className="block text-sm font-semibold text-slate-950">FinAdvisor</span>
+              <span className="block text-sm font-semibold text-slate-950">FinAssuro</span>
               <span className="block text-xs font-medium text-slate-500">Trois espaces distincts</span>
             </span>
           </Link>
@@ -123,7 +123,7 @@ export default async function PortalHomePage() {
             Accès séparés par profil
           </div>
           <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-            Choisissez le bon espace avant d’entrer dans FinAdvisor.
+            Choisissez le bon espace avant d’entrer dans FinAssuro.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
             Le développeur, le client qui cherche une assurance et le conseiller ne doivent pas voir le même produit. Chaque interface a son objectif, son langage et ses permissions.

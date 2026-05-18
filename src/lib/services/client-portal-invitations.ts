@@ -85,7 +85,7 @@ Utilisez le même courriel que celui associé à votre dossier.`
 }
 
 function buildSmsText({ firstName, portalUrl }: { firstName: string; portalUrl: string }) {
-  return `Bonjour ${firstName}, veuillez compléter votre profil client sécurisé FinAdvisor ici: ${portalUrl}`
+  return `Bonjour ${firstName}, veuillez compléter votre profil client sécurisé FinAssuro ici: ${portalUrl}`
 }
 
 async function notifyAdvisor({

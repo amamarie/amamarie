@@ -1399,7 +1399,7 @@ export async function testSmartReminderExternalChannels({ organizationId, channe
   const slackUrl = settings.smartRemindersSlackWebhookUrl?.trim() || process.env.SMART_REMINDERS_SLACK_WEBHOOK_URL?.trim()
   const teamsUrl = settings.smartRemindersTeamsWebhookUrl?.trim() || process.env.SMART_REMINDERS_TEAMS_WEBHOOK_URL?.trim()
   const selected = channel ?? "ALL"
-  const text = "Test FinAdvisor CRM - notifications Slack/Teams des rappels intelligents configurées."
+  const text = "Test FinAssuro CRM - notifications Slack/Teams des rappels intelligents configurées."
   const deliveries = []
 
   if ((selected === "ALL" || selected === "SLACK") && slackUrl) {

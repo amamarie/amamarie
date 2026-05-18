@@ -92,7 +92,7 @@ async function stripeRequest<T>(pathName: string, body?: URLSearchParams, init?:
   return json as T
 }
 
-async function getFinAdvisorProducts() {
+async function getFinAssuroProducts() {
   const response = await stripeRequest<StripeList<StripeProduct>>("/products?active=true&limit=100")
   return response.data.filter((product) => product.metadata?.app === "finadvisor")
 }
@@ -104,7 +104,7 @@ async function ensureProduct(plan: SubscriptionPlanKey, existingProducts: Stripe
 
   const product = subscriptionPlans[plan]
   const params = new URLSearchParams()
-  params.set("name", `FinAdvisor ${product.label}`)
+  params.set("name", `FinAssuro ${product.label}`)
   params.set("description", product.description)
   params.set("metadata[app]", "finadvisor")
   params.set("metadata[finadvisor_product_key]", productKey)
@@ -177,7 +177,7 @@ async function ensurePrice({
 }
 
 async function main() {
-  const existingProducts = await getFinAdvisorProducts()
+  const existingProducts = await getFinAssuroProducts()
   const result: Array<{
     mode: SubscriptionPricingModeKey
     plan: SubscriptionPlanKey

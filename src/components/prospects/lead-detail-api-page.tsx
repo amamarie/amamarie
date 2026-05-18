@@ -224,7 +224,7 @@ function parseLeadQualification(notes?: string | null): ParsedLeadQualification 
   const normalized = notes?.replace(/\s+/g, " ").trim()
   if (!normalized) return null
 
-  const marker = "--- Qualification automatique FinAdvisor"
+  const marker = "--- Qualification automatique FinAssuro"
   const markerIndex = normalized.indexOf(marker)
   if (markerIndex === -1) {
     return { message: normalized }

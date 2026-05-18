@@ -542,7 +542,7 @@ function getTeamInviteBlockReason(billing: SettingsBillingSummary) {
 
 function createDefaultGeneralPreferences(billing: SettingsBillingSummary): GeneralPreferencesProfile {
   return {
-    spaceName: "FinAdvisor CRM",
+    spaceName: "FinAssuro CRM",
     homePage: "Tableau de bord",
     language: "Français",
     timezone: "America/Toronto",
@@ -2055,7 +2055,7 @@ function IntegrationsSection({
                   }
                   onAction({
                     title: `${integration.action} - ${integration.name}`,
-                    description: integration.isGmailConnected ? `Google Workspace est connecté avec ${gmailStatus?.email}. FinAdvisor peut envoyer des courriels, synchroniser le calendrier et préparer l’accès Drive/Sheets autorisé.` : integration.description,
+                    description: integration.isGmailConnected ? `Google Workspace est connecté avec ${gmailStatus?.email}. FinAssuro peut envoyer des courriels, synchroniser le calendrier et préparer l’accès Drive/Sheets autorisé.` : integration.description,
                     primaryLabel: integration.action,
                     icon: Link2,
                     mode: integration.action === "Voir" ? "preview" : "form",
@@ -2744,7 +2744,7 @@ function templateSampleVariables(profile?: Partial<AdvisorProfile>) {
   const signature = profile?.signatureEmail?.trim() || [
     displayName,
     title,
-    "FinAdvisor CRM",
+    "FinAssuro CRM",
     `${phone} · ${email} · Site web`,
   ].join("\n")
 
@@ -2753,9 +2753,9 @@ function templateSampleVariables(profile?: Partial<AdvisorProfile>) {
     "{{nom}}": "Tremblay",
     "{{nom_conseiller}}": displayName,
     "{{date_rendez_vous}}": "8 mai 2026 à 10 h",
-    "{{lien_document}}": "https://app.finadvisor.ca/upload/securise",
+    "{{lien_document}}": "https://finassuro.com/upload/securise",
     "{{nom_document}}": "Pièce d’identité",
-    "{{nom_cabinet}}": "FinAdvisor CRM",
+    "{{nom_cabinet}}": "FinAssuro CRM",
     "{{telephone_conseiller}}": phone,
     "{{courriel_conseiller}}": email,
     "{{titre_conseiller}}": title,
@@ -2918,7 +2918,7 @@ function formValuesFromElement(form: HTMLFormElement): SettingsFormValues {
 
 function normalizeOrganizationProfile(values: Partial<Record<keyof OrganizationSettingsProfile, string | null | undefined>>): OrganizationSettingsProfile {
   return {
-    name: values.name?.trim() || "FinAdvisor CRM",
+    name: values.name?.trim() || "FinAssuro CRM",
     legalName: values.legalName?.trim() ?? "",
     businessNumber: values.businessNumber?.trim() ?? "",
     phone: values.phone?.trim() ?? "",
@@ -3316,7 +3316,7 @@ function BrandForm() {
   return (
     <FormSection title="Marque et apparence" description="Paramètres utilisés dans les communications et documents générés.">
       <div className="grid gap-4 sm:grid-cols-2">
-        <LabeledInput label="Nom affiché" defaultValue="FinAdvisor CRM" />
+        <LabeledInput label="Nom affiché" defaultValue="FinAssuro CRM" />
         <LabeledInput label="Logo du cabinet" type="file" />
         <LabeledInput label="Couleur principale" defaultValue="#059669" type="color" />
         <LabeledSelect label="Style de signature" options={["Professionnel compact", "Professionnel complet", "Minimal"]} />
@@ -3353,7 +3353,7 @@ function TeamUserForm({ action, billing }: { action: SettingsAction; billing: Se
         <LabeledSelect label="Accès client" options={["Tous les clients", "Clients assignés seulement", "Aucun accès client"]} />
         <LabeledSelect label="Accès documents" options={["Éditeur", "Lecteur", "Aucun accès"]} />
       </div>
-      <LabeledTextarea label="Message d’invitation" defaultValue="Bonjour, vous êtes invité à rejoindre l’espace sécurisé du cabinet dans FinAdvisor CRM." rows={4} />
+      <LabeledTextarea label="Message d’invitation" defaultValue="Bonjour, vous êtes invité à rejoindre l’espace sécurisé du cabinet dans FinAssuro CRM." rows={4} />
       <CheckboxList items={["Exiger 2FA à la première connexion", "Envoyer une copie au propriétaire", "Limiter l’accès aux dossiers assignés"]} />
     </FormSection>
   )

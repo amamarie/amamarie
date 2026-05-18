@@ -53,7 +53,7 @@ function labelTemperature(value: LeadIntakeQualification["temperature"]) {
 
 function buildQualificationNote({ source, qualification }: { source: LeadIntakeSource; qualification: LeadIntakeQualification }) {
   return [
-    "Qualification automatique FinAdvisor",
+    "Qualification automatique FinAssuro",
     `Source: ${source}`,
     `Température: ${labelTemperature(qualification.temperature)}`,
     `Intention: ${qualification.intent}`,
@@ -237,7 +237,7 @@ export async function runLeadIntakeAutomation(input: RunLeadIntakeAutomationInpu
       advisorId: input.advisorId ?? lead.advisorId,
       leadId: lead.id,
       title: "Relancer le prospect si aucune réponse",
-      description: `Suivi automatique planifié par FinAdvisor après la qualification. Prochaine action: ${qualification.nextBestAction}`,
+      description: `Suivi automatique planifié par FinAssuro après la qualification. Prochaine action: ${qualification.nextBestAction}`,
       priority: priority === "URGENT" ? "HIGH" : "NORMAL",
       type: "FOLLOW_UP",
       dueDate: followUpDate(qualification.followUpDelayHours),

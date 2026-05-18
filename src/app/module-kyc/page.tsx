@@ -30,7 +30,7 @@ export default function KycMarketingPage() {
       <section className="border-b border-slate-100 bg-emerald-950 text-white">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
           <div>
-            <p className="text-sm font-black uppercase tracking-wide text-emerald-200">FinAdvisor CRM</p>
+            <p className="text-sm font-black uppercase tracking-wide text-emerald-200">FinAssuro CRM</p>
             <h1 className="mt-4 max-w-3xl text-5xl font-black tracking-tight">Module Profil client intelligent pour conseillers financiers</h1>
             <p className="mt-5 max-w-2xl text-lg font-semibold leading-8 text-emerald-50">
               Collectez, validez, confirmez et verrouillez le profil client avec objectifs, horizon, liquidité, tolérance au risque, capacité de risque, audit trail et preuve de convenance.

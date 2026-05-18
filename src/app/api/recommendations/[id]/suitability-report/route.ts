@@ -74,7 +74,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const clientName = `${recommendation.client.firstName} ${recommendation.client.lastName}`.trim()
     const generatedAt = new Date()
     const lines = [
-      "FINADVISOR CRM",
+      "FINASSURO CRM",
       "RAPPORT DE CONVENANCE",
       `Document date: ${new Intl.DateTimeFormat("fr-CA").format(generatedAt)}`,
       `Client: ${clientName}`,

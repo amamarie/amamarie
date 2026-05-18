@@ -90,7 +90,7 @@ export default async function DeveloperConsolePage({ searchParams }: DeveloperCo
                   <Sparkles className="size-4" aria-hidden="true" />
                   CRM développeur
                 </div>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Pilotage SaaS FinAdvisor</h1>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Pilotage SaaS FinAssuro</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                   Vue compacte des cabinets, accès, santé produit, forfaits et activité technique. Les détails sont séparés par page.
                 </p>

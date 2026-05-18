@@ -112,7 +112,7 @@ async function ensureN8nCallbackFollowUp({
       createdById: advisorId,
       type: "FOLLOW_UP",
       title: "Vérifier automatisation multicanal n8n",
-      description: "Le formulaire a déclenché le workflow n8n, mais aucun callback SMS, courriel, Google Sheets ou tâche n’a encore été reçu. Vérifier que le workflow n8n est créé, actif et qu’il rappelle FinAdvisor.",
+      description: "Le formulaire a déclenché le workflow n8n, mais aucun callback SMS, courriel, Google Sheets ou tâche n’a encore été reçu. Vérifier que le workflow n8n est créé, actif et qu’il rappelle FinAssuro.",
       priority: "HIGH",
       status: "TODO",
       isAutomated: true,
@@ -135,7 +135,7 @@ async function ensureN8nCallbackFollowUp({
     taskId: task.id,
     type: "AUTOMATION_FAILED",
     title: "Callback n8n multicanal non reçu",
-    description: "Le workflow a été demandé, mais FinAdvisor n’a reçu aucune preuve d’exécution multicanale.",
+    description: "Le workflow a été demandé, mais FinAssuro n’a reçu aucune preuve d’exécution multicanale.",
     source: "AUTOMATION",
     entityType: "LeadFormSubmission",
     entityId: submissionId,
@@ -206,7 +206,7 @@ export async function createLeadForm({
       const sheet = await createLeadFormSpreadsheet({
         organizationId,
         advisorId,
-        title: `FinAdvisor - ${form.name}`,
+        title: `FinAssuro - ${form.name}`,
         sheetName: form.googleSheetName,
       })
       if (!sheet.skipped) {

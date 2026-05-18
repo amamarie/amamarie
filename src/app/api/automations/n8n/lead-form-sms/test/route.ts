@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const user = await requireOwner()
     const body = await request.json().catch(() => ({})) as { phone?: string; email?: string; message?: string; interestType?: string }
     const phone = normalizePhoneNumber(body.phone) || "+15145550123"
-    const email = body.email?.trim() || "test-formulaire@finadvisor.local"
+    const email = body.email?.trim() || "test-formulaire@finassuro.local"
     const interestType = body.interestType?.trim() || "Assurance vie"
     const message = body.message?.trim() || "Bonjour, je veux une assurance vie rapidement. Budget environ 150 $ par mois, protection familiale et hypothèque."
 

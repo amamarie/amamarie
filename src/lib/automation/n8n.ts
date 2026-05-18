@@ -19,13 +19,13 @@ type N8nHealthResult = {
 }
 
 export const LEAD_FORM_SMS_WORKFLOW_KEY = "lead.form.sms_confirmation"
-export const LEAD_FORM_SMS_WORKFLOW_NAME = "FinAdvisor - SMS confirmation formulaire"
+export const LEAD_FORM_SMS_WORKFLOW_NAME = "FinAssuro - SMS confirmation formulaire"
 export const LEAD_FORM_MULTICHANNEL_WORKFLOW_KEY = "lead.form.multichannel_followup"
-export const LEAD_FORM_MULTICHANNEL_WORKFLOW_NAME = "FinAdvisor - Formulaire multicanal"
+export const LEAD_FORM_MULTICHANNEL_WORKFLOW_NAME = "FinAssuro - Formulaire multicanal"
 export const LEAD_FORM_QUALIFICATION_ROUTING_WORKFLOW_KEY = "lead.form.ai_qualification_routing"
-export const LEAD_FORM_QUALIFICATION_ROUTING_WORKFLOW_NAME = "FinAdvisor - Formulaire qualification IA et routage"
+export const LEAD_FORM_QUALIFICATION_ROUTING_WORKFLOW_NAME = "FinAssuro - Formulaire qualification IA et routage"
 export const INBOUND_CALL_RECEPTION_WORKFLOW_KEY = "call.inbound.reception_advisor"
-export const INBOUND_CALL_RECEPTION_WORKFLOW_NAME = "FinAdvisor - Réception appel conseiller"
+export const INBOUND_CALL_RECEPTION_WORKFLOW_NAME = "FinAssuro - Réception appel conseiller"
 export const RETELL_ASSURANCE_PHONE_AGENT_WORKFLOW_KEY = "assurance.phone_agent"
 export const RETELL_ASSURANCE_PHONE_AGENT_WORKFLOW_NAME = "Agent téléphonique assurance - qualification prospects et appels entrants"
 const LEAD_FORM_SMS_WEBHOOK_ID = "d61f7afb-2dd7-4d9b-9c03-3a6036c739b1"
@@ -175,7 +175,7 @@ function workflowWebhookId(workflowKey: string) {
 }
 
 function leadFormSmsWorkflowPayload() {
-  const webhookId = "FinAdvisorWebhook"
+  const webhookId = "FinAssuroWebhook"
   const sendSmsId = "SendSmsCallback"
   const successId = "SuccessResponse"
 
@@ -184,7 +184,7 @@ function leadFormSmsWorkflowPayload() {
     nodes: [
       {
         id: webhookId,
-        name: "Réception FinAdvisor",
+        name: "Réception FinAssuro",
         type: "n8n-nodes-base.webhook",
         typeVersion: 2,
         webhookId: workflowWebhookId(LEAD_FORM_SMS_WORKFLOW_KEY),
@@ -198,17 +198,17 @@ function leadFormSmsWorkflowPayload() {
       },
       {
         id: sendSmsId,
-        name: "Demander SMS à FinAdvisor",
+        name: "Demander SMS à FinAssuro",
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4.2,
         position: [520, 260],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -218,14 +218,14 @@ function leadFormSmsWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "send_sms" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "SMS confirmation formulaire envoyé" },
               { name: "description", value: "Confirmation SMS demandée par n8n." },
-              { name: "message", value: '={{ $node["Réception FinAdvisor"].json.body.params.smsTemplate || "Bonjour, votre demande a bien été reçue. Un conseiller vous contactera sous peu." }}' },
+              { name: "message", value: '={{ $node["Réception FinAssuro"].json.body.params.smsTemplate || "Bonjour, votre demande a bien été reçue. Un conseiller vous contactera sous peu." }}' },
             ],
           },
           options: {},
@@ -233,7 +233,7 @@ function leadFormSmsWorkflowPayload() {
       },
       {
         id: successId,
-        name: "Réponse FinAdvisor",
+        name: "Réponse FinAssuro",
         type: "n8n-nodes-base.respondToWebhook",
         typeVersion: 1,
         position: [800, 260],
@@ -245,11 +245,11 @@ function leadFormSmsWorkflowPayload() {
       },
     ],
     connections: {
-      "Réception FinAdvisor": {
-        main: [[{ node: "Demander SMS à FinAdvisor", type: "main", index: 0 }]],
+      "Réception FinAssuro": {
+        main: [[{ node: "Demander SMS à FinAssuro", type: "main", index: 0 }]],
       },
-      "Demander SMS à FinAdvisor": {
-        main: [[{ node: "Réponse FinAdvisor", type: "main", index: 0 }]],
+      "Demander SMS à FinAssuro": {
+        main: [[{ node: "Réponse FinAssuro", type: "main", index: 0 }]],
       },
     },
     settings: {
@@ -259,7 +259,7 @@ function leadFormSmsWorkflowPayload() {
 }
 
 function leadFormMultichannelWorkflowPayload() {
-  const webhookId = "FinAdvisorWebhook"
+  const webhookId = "FinAssuroWebhook"
   const smsId = "SendSmsCallback"
   const emailProofId = "EmailProofCallback"
   const sheetsProofId = "SheetsProofCallback"
@@ -271,7 +271,7 @@ function leadFormMultichannelWorkflowPayload() {
     nodes: [
       {
         id: webhookId,
-        name: "Réception FinAdvisor",
+        name: "Réception FinAssuro",
         type: "n8n-nodes-base.webhook",
         typeVersion: 2,
         webhookId: workflowWebhookId(LEAD_FORM_MULTICHANNEL_WORKFLOW_KEY),
@@ -285,17 +285,17 @@ function leadFormMultichannelWorkflowPayload() {
       },
       {
         id: smsId,
-        name: "Demander SMS à FinAdvisor",
+        name: "Demander SMS à FinAssuro",
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4.2,
         position: [420, 120],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -305,14 +305,14 @@ function leadFormMultichannelWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "send_sms" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "SMS confirmation formulaire envoyé" },
               { name: "description", value: "SMS demandé par workflow multicanal n8n." },
-              { name: "message", value: '={{ $node["Réception FinAdvisor"].json.body.params.smsTemplate }}' },
+              { name: "message", value: '={{ $node["Réception FinAssuro"].json.body.params.smsTemplate }}' },
             ],
           },
           options: {},
@@ -326,11 +326,11 @@ function leadFormMultichannelWorkflowPayload() {
         position: [420, 260],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -340,14 +340,14 @@ function leadFormMultichannelWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "send_email" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "Courriel HTML envoyé par workflow" },
-              { name: "subject", value: '={{ $node["Réception FinAdvisor"].json.body.params.emailSubject || "Votre demande a bien été reçue" }}' },
-              { name: "html", value: '={{ $node["Réception FinAdvisor"].json.body.params.emailHtml }}' },
+              { name: "subject", value: '={{ $node["Réception FinAssuro"].json.body.params.emailSubject || "Votre demande a bien été reçue" }}' },
+              { name: "html", value: '={{ $node["Réception FinAssuro"].json.body.params.emailHtml }}' },
               { name: "text", value: "Votre demande a bien été reçue. Un conseiller vous contactera sous peu." },
             ],
           },
@@ -362,11 +362,11 @@ function leadFormMultichannelWorkflowPayload() {
         position: [420, 400],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -376,13 +376,13 @@ function leadFormMultichannelWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "append_google_sheet" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "leadFormId", value: '={{ $node["Réception FinAdvisor"].json.body.payload.leadFormId }}' },
-              { name: "submissionId", value: '={{ $node["Réception FinAdvisor"].json.body.payload.submissionId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "leadFormId", value: '={{ $node["Réception FinAssuro"].json.body.payload.leadFormId }}' },
+              { name: "submissionId", value: '={{ $node["Réception FinAssuro"].json.body.payload.submissionId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "Google Sheets synchronisé par workflow" },
             ],
           },
@@ -397,11 +397,11 @@ function leadFormMultichannelWorkflowPayload() {
         position: [700, 260],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -411,15 +411,15 @@ function leadFormMultichannelWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "create_task" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
-              { name: "title", value: '={{ $node["Réception FinAdvisor"].json.body.params.taskTitle || "Suivi formulaire web multicanal" }}' },
-              { name: "description", value: '={{ $node["Réception FinAdvisor"].json.body.params.taskDescription || "Vérifier la demande formulaire et confirmer le besoin du prospect." }}' },
-              { name: "priority", value: '={{ $node["Réception FinAdvisor"].json.body.params.taskPriority || "HIGH" }}' },
-              { name: "dueInHours", value: '={{ $node["Réception FinAdvisor"].json.body.params.taskDueInHours || 2 }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
+              { name: "title", value: '={{ $node["Réception FinAssuro"].json.body.params.taskTitle || "Suivi formulaire web multicanal" }}' },
+              { name: "description", value: '={{ $node["Réception FinAssuro"].json.body.params.taskDescription || "Vérifier la demande formulaire et confirmer le besoin du prospect." }}' },
+              { name: "priority", value: '={{ $node["Réception FinAssuro"].json.body.params.taskPriority || "HIGH" }}' },
+              { name: "dueInHours", value: '={{ $node["Réception FinAssuro"].json.body.params.taskDueInHours || 2 }}' },
             ],
           },
           options: {},
@@ -427,7 +427,7 @@ function leadFormMultichannelWorkflowPayload() {
       },
       {
         id: successId,
-        name: "Réponse FinAdvisor",
+        name: "Réponse FinAssuro",
         type: "n8n-nodes-base.respondToWebhook",
         typeVersion: 1,
         position: [980, 260],
@@ -439,10 +439,10 @@ function leadFormMultichannelWorkflowPayload() {
       },
     ],
     connections: {
-      "Réception FinAdvisor": {
+      "Réception FinAssuro": {
         main: [
           [
-            { node: "Demander SMS à FinAdvisor", type: "main", index: 0 },
+            { node: "Demander SMS à FinAssuro", type: "main", index: 0 },
             { node: "Journal courriel HTML", type: "main", index: 0 },
             { node: "Journal Google Sheets", type: "main", index: 0 },
           ],
@@ -452,7 +452,7 @@ function leadFormMultichannelWorkflowPayload() {
         main: [[{ node: "Créer tâche conseiller", type: "main", index: 0 }]],
       },
       "Créer tâche conseiller": {
-        main: [[{ node: "Réponse FinAdvisor", type: "main", index: 0 }]],
+        main: [[{ node: "Réponse FinAssuro", type: "main", index: 0 }]],
       },
     },
     settings: {
@@ -462,23 +462,23 @@ function leadFormMultichannelWorkflowPayload() {
 }
 
 function leadFormQualificationRoutingWorkflowPayload() {
-  const webhookId = "FinAdvisorWebhook"
+  const webhookId = "FinAssuroWebhook"
   const aiId = "OpenAiQualification"
   const routeId = "RouteLeadCallback"
   const successId = "SuccessResponse"
 
   const aiJsonExpression = '={{ (() => { try { const content = $node["Analyse IA OpenAI"].json.choices?.[0]?.message?.content || "{}"; return JSON.parse(content.replace(/```json|```/g, "").trim()); } catch (e) { return {}; } })() }}'
-  const detectedNeedExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const body = $node["Réception FinAdvisor"].json.body || {}; const payload = body.payload || {}; const text = [payload.interestType, payload.message, body.params?.message].filter(Boolean).join(" ").toLowerCase(); if (ai.detectedNeed) return ai.detectedNeed; if (text.includes("invalid")) return "invalidité"; if (text.includes("placement") || text.includes("invest")) return "placement"; if (text.includes("retraite") || text.includes("pension")) return "retraite"; if (text.includes("entreprise") || text.includes("corpor") || text.includes("actionnaire")) return "entreprise"; if (text.includes("vie") || text.includes("assurance") || text.includes("hypoth")) return "assurance vie"; return "général"; })() }}'
-  const urgencyExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const body = $node["Réception FinAdvisor"].json.body || {}; const payload = body.payload || {}; const text = [payload.interestType, payload.message].filter(Boolean).join(" ").toLowerCase(); if (ai.urgency) return ai.urgency; if (text.includes("urgent") || text.includes("rapidement") || text.includes("aujourd")) return "URGENT"; if (text.includes("cette semaine") || text.includes("important")) return "HIGH"; if (text.includes("pas press") || text.includes("plus tard")) return "LOW"; return "HIGH"; })() }}'
-  const budgetExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const payload = ($node["Réception FinAdvisor"].json.body || {}).payload || {}; const text = [payload.message, payload.interestType].filter(Boolean).join(" "); if (ai.budget) return ai.budget; const match = text.match(/(?:budget|montant|prime|investir|placement)?\\s*(\\$?\\s?\\d[\\d\\s.,]*(?:k|K)?\\s?\\$?)/); return match ? match[1].trim() : ""; })() }}'
-  const rationaleExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; return ai.rationale || "Analyse n8n avec fallback FinAdvisor. Routage demandé."; })() }}'
+  const detectedNeedExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const body = $node["Réception FinAssuro"].json.body || {}; const payload = body.payload || {}; const text = [payload.interestType, payload.message, body.params?.message].filter(Boolean).join(" ").toLowerCase(); if (ai.detectedNeed) return ai.detectedNeed; if (text.includes("invalid")) return "invalidité"; if (text.includes("placement") || text.includes("invest")) return "placement"; if (text.includes("retraite") || text.includes("pension")) return "retraite"; if (text.includes("entreprise") || text.includes("corpor") || text.includes("actionnaire")) return "entreprise"; if (text.includes("vie") || text.includes("assurance") || text.includes("hypoth")) return "assurance vie"; return "général"; })() }}'
+  const urgencyExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const body = $node["Réception FinAssuro"].json.body || {}; const payload = body.payload || {}; const text = [payload.interestType, payload.message].filter(Boolean).join(" ").toLowerCase(); if (ai.urgency) return ai.urgency; if (text.includes("urgent") || text.includes("rapidement") || text.includes("aujourd")) return "URGENT"; if (text.includes("cette semaine") || text.includes("important")) return "HIGH"; if (text.includes("pas press") || text.includes("plus tard")) return "LOW"; return "HIGH"; })() }}'
+  const budgetExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; const payload = ($node["Réception FinAssuro"].json.body || {}).payload || {}; const text = [payload.message, payload.interestType].filter(Boolean).join(" "); if (ai.budget) return ai.budget; const match = text.match(/(?:budget|montant|prime|investir|placement)?\\s*(\\$?\\s?\\d[\\d\\s.,]*(?:k|K)?\\s?\\$?)/); return match ? match[1].trim() : ""; })() }}'
+  const rationaleExpression = '={{ (() => { const ai = ' + aiJsonExpression.slice(3, -3) + '; return ai.rationale || "Analyse n8n avec fallback FinAssuro. Routage demandé."; })() }}'
 
   return {
     name: LEAD_FORM_QUALIFICATION_ROUTING_WORKFLOW_NAME,
     nodes: [
       {
         id: webhookId,
-        name: "Réception FinAdvisor",
+        name: "Réception FinAssuro",
         type: "n8n-nodes-base.webhook",
         typeVersion: 2,
         webhookId: workflowWebhookId(LEAD_FORM_QUALIFICATION_ROUTING_WORKFLOW_KEY),
@@ -510,23 +510,23 @@ function leadFormQualificationRoutingWorkflowPayload() {
           sendBody: true,
           contentType: "json",
           specifyBody: "json",
-          jsonBody: '={{ JSON.stringify({ model: $env.OPENAI_MODEL || "gpt-4.1-mini", temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: "Tu qualifies un prospect pour un cabinet financier canadien. Réponds seulement en JSON avec detectedNeed, urgency, budget, rationale. detectedNeed doit être assurance vie, invalidité, placement, retraite, entreprise ou général. urgency doit être LOW, NORMAL, HIGH ou URGENT." }, { role: "user", content: "Intérêt: " + (($node["Réception FinAdvisor"].json.body.payload || {}).interestType || "") + "\\nMessage: " + (($node["Réception FinAdvisor"].json.body.payload || {}).message || "") }] }) }}',
+          jsonBody: '={{ JSON.stringify({ model: $env.OPENAI_MODEL || "gpt-4.1-mini", temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: "Tu qualifies un prospect pour un cabinet financier canadien. Réponds seulement en JSON avec detectedNeed, urgency, budget, rationale. detectedNeed doit être assurance vie, invalidité, placement, retraite, entreprise ou général. urgency doit être LOW, NORMAL, HIGH ou URGENT." }, { role: "user", content: "Intérêt: " + (($node["Réception FinAssuro"].json.body.payload || {}).interestType || "") + "\\nMessage: " + (($node["Réception FinAssuro"].json.body.payload || {}).message || "") }] }) }}',
           options: {},
         },
       },
       {
         id: routeId,
-        name: "Qualifier et router dans FinAdvisor",
+        name: "Qualifier et router dans FinAssuro",
         type: "n8n-nodes-base.httpRequest",
         typeVersion: 4.2,
         position: [780, 260],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -536,13 +536,13 @@ function leadFormQualificationRoutingWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "route_lead" },
-              { name: "organizationId", value: '={{ $node["Réception FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception FinAdvisor"].json.body.leadId }}' },
-              { name: "leadFormId", value: '={{ $node["Réception FinAdvisor"].json.body.payload.leadFormId }}' },
-              { name: "submissionId", value: '={{ $node["Réception FinAdvisor"].json.body.payload.submissionId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception FinAssuro"].json.body.leadId }}' },
+              { name: "leadFormId", value: '={{ $node["Réception FinAssuro"].json.body.payload.leadFormId }}' },
+              { name: "submissionId", value: '={{ $node["Réception FinAssuro"].json.body.payload.submissionId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "Qualification IA et routage conseiller" },
               { name: "detectedNeed", value: detectedNeedExpression },
               { name: "urgency", value: urgencyExpression },
@@ -555,7 +555,7 @@ function leadFormQualificationRoutingWorkflowPayload() {
       },
       {
         id: successId,
-        name: "Réponse FinAdvisor",
+        name: "Réponse FinAssuro",
         type: "n8n-nodes-base.respondToWebhook",
         typeVersion: 1,
         position: [1080, 260],
@@ -567,14 +567,14 @@ function leadFormQualificationRoutingWorkflowPayload() {
       },
     ],
     connections: {
-      "Réception FinAdvisor": {
+      "Réception FinAssuro": {
         main: [[{ node: "Analyse IA OpenAI", type: "main", index: 0 }]],
       },
       "Analyse IA OpenAI": {
-        main: [[{ node: "Qualifier et router dans FinAdvisor", type: "main", index: 0 }]],
+        main: [[{ node: "Qualifier et router dans FinAssuro", type: "main", index: 0 }]],
       },
-      "Qualifier et router dans FinAdvisor": {
-        main: [[{ node: "Réponse FinAdvisor", type: "main", index: 0 }]],
+      "Qualifier et router dans FinAssuro": {
+        main: [[{ node: "Réponse FinAssuro", type: "main", index: 0 }]],
       },
     },
     settings: {
@@ -584,7 +584,7 @@ function leadFormQualificationRoutingWorkflowPayload() {
 }
 
 function inboundCallReceptionWorkflowPayload() {
-  const webhookId = "FinAdvisorWebhook"
+  const webhookId = "FinAssuroWebhook"
   const activityId = "CreateCallActivity"
   const taskId = "CreateAdvisorTask"
   const smsId = "SendCallerSms"
@@ -595,7 +595,7 @@ function inboundCallReceptionWorkflowPayload() {
     nodes: [
       {
         id: webhookId,
-        name: "Réception appel FinAdvisor",
+        name: "Réception appel FinAssuro",
         type: "n8n-nodes-base.webhook",
         typeVersion: 2,
         webhookId: workflowWebhookId(INBOUND_CALL_RECEPTION_WORKFLOW_KEY),
@@ -615,11 +615,11 @@ function inboundCallReceptionWorkflowPayload() {
         position: [470, 120],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception appel FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception appel FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -629,15 +629,15 @@ function inboundCallReceptionWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "create_activity" },
-              { name: "organizationId", value: '={{ $node["Réception appel FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception appel FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception appel FinAdvisor"].json.body.leadId }}' },
-              { name: "clientId", value: '={{ $node["Réception appel FinAdvisor"].json.body.clientId }}' },
-              { name: "callId", value: '={{ $node["Réception appel FinAdvisor"].json.body.entityId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception appel FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception appel FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception appel FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception appel FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception appel FinAssuro"].json.body.leadId }}' },
+              { name: "clientId", value: '={{ $node["Réception appel FinAssuro"].json.body.clientId }}' },
+              { name: "callId", value: '={{ $node["Réception appel FinAssuro"].json.body.entityId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception appel FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception appel FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "Réception appel orchestrée par n8n" },
-              { name: "description", value: '={{ "Appel entrant de " + ($node["Réception appel FinAdvisor"].json.body.payload.fromNumber || $node["Réception appel FinAdvisor"].json.body.payload.phone || "numéro inconnu") }}' },
+              { name: "description", value: '={{ "Appel entrant de " + ($node["Réception appel FinAssuro"].json.body.payload.fromNumber || $node["Réception appel FinAssuro"].json.body.payload.phone || "numéro inconnu") }}' },
             ],
           },
           options: {},
@@ -651,11 +651,11 @@ function inboundCallReceptionWorkflowPayload() {
         position: [470, 300],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception appel FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception appel FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -665,17 +665,17 @@ function inboundCallReceptionWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "create_task" },
-              { name: "organizationId", value: '={{ $node["Réception appel FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception appel FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception appel FinAdvisor"].json.body.leadId }}' },
-              { name: "clientId", value: '={{ $node["Réception appel FinAdvisor"].json.body.clientId }}' },
-              { name: "callId", value: '={{ $node["Réception appel FinAdvisor"].json.body.entityId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception appel FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception appel FinAdvisor"].json.body.workflowKey }}' },
-              { name: "title", value: '={{ $node["Réception appel FinAdvisor"].json.body.params.taskTitle || "Rappeler après appel entrant" }}' },
-              { name: "description", value: '={{ ($node["Réception appel FinAdvisor"].json.body.params.taskDescription || "Appel entrant reçu. Vérifier le dossier, rappeler la personne et documenter le besoin.") + "\\nNuméro: " + ($node["Réception appel FinAdvisor"].json.body.payload.fromNumber || $node["Réception appel FinAdvisor"].json.body.payload.phone || "") }}' },
-              { name: "priority", value: '={{ $node["Réception appel FinAdvisor"].json.body.params.taskPriority || "URGENT" }}' },
-              { name: "dueInHours", value: '={{ $node["Réception appel FinAdvisor"].json.body.params.taskDueInHours || 1 }}' },
+              { name: "organizationId", value: '={{ $node["Réception appel FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception appel FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception appel FinAssuro"].json.body.leadId }}' },
+              { name: "clientId", value: '={{ $node["Réception appel FinAssuro"].json.body.clientId }}' },
+              { name: "callId", value: '={{ $node["Réception appel FinAssuro"].json.body.entityId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception appel FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception appel FinAssuro"].json.body.workflowKey }}' },
+              { name: "title", value: '={{ $node["Réception appel FinAssuro"].json.body.params.taskTitle || "Rappeler après appel entrant" }}' },
+              { name: "description", value: '={{ ($node["Réception appel FinAssuro"].json.body.params.taskDescription || "Appel entrant reçu. Vérifier le dossier, rappeler la personne et documenter le besoin.") + "\\nNuméro: " + ($node["Réception appel FinAssuro"].json.body.payload.fromNumber || $node["Réception appel FinAssuro"].json.body.payload.phone || "") }}' },
+              { name: "priority", value: '={{ $node["Réception appel FinAssuro"].json.body.params.taskPriority || "URGENT" }}' },
+              { name: "dueInHours", value: '={{ $node["Réception appel FinAssuro"].json.body.params.taskDueInHours || 1 }}' },
             ],
           },
           options: {},
@@ -689,11 +689,11 @@ function inboundCallReceptionWorkflowPayload() {
         position: [750, 300],
         parameters: {
           method: "POST",
-          url: '={{ $node["Réception appel FinAdvisor"].json.body.callback.url }}',
+          url: '={{ $node["Réception appel FinAssuro"].json.body.callback.url }}',
           sendHeaders: true,
           headerParameters: {
             parameters: [
-              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAdvisor"].json.body.callback.token }}' },
+              { name: "Authorization", value: '={{ "Bearer " + $node["Réception appel FinAssuro"].json.body.callback.token }}' },
               { name: "Content-Type", value: "application/json" },
             ],
           },
@@ -703,15 +703,15 @@ function inboundCallReceptionWorkflowPayload() {
           bodyParameters: {
             parameters: [
               { name: "action", value: "send_sms" },
-              { name: "organizationId", value: '={{ $node["Réception appel FinAdvisor"].json.body.organizationId }}' },
-              { name: "userId", value: '={{ $node["Réception appel FinAdvisor"].json.body.userId }}' },
-              { name: "leadId", value: '={{ $node["Réception appel FinAdvisor"].json.body.leadId }}' },
-              { name: "clientId", value: '={{ $node["Réception appel FinAdvisor"].json.body.clientId }}' },
-              { name: "callId", value: '={{ $node["Réception appel FinAdvisor"].json.body.entityId }}' },
-              { name: "automationRuleId", value: '={{ $node["Réception appel FinAdvisor"].json.body.automationRuleId }}' },
-              { name: "workflowKey", value: '={{ $node["Réception appel FinAdvisor"].json.body.workflowKey }}' },
+              { name: "organizationId", value: '={{ $node["Réception appel FinAssuro"].json.body.organizationId }}' },
+              { name: "userId", value: '={{ $node["Réception appel FinAssuro"].json.body.userId }}' },
+              { name: "leadId", value: '={{ $node["Réception appel FinAssuro"].json.body.leadId }}' },
+              { name: "clientId", value: '={{ $node["Réception appel FinAssuro"].json.body.clientId }}' },
+              { name: "callId", value: '={{ $node["Réception appel FinAssuro"].json.body.entityId }}' },
+              { name: "automationRuleId", value: '={{ $node["Réception appel FinAssuro"].json.body.automationRuleId }}' },
+              { name: "workflowKey", value: '={{ $node["Réception appel FinAssuro"].json.body.workflowKey }}' },
               { name: "title", value: "SMS appel reçu envoyé" },
-              { name: "message", value: '={{ $node["Réception appel FinAdvisor"].json.body.params.callerSmsTemplate || "Bonjour, nous avons bien reçu votre appel. Un conseiller vous contactera rapidement." }}' },
+              { name: "message", value: '={{ $node["Réception appel FinAssuro"].json.body.params.callerSmsTemplate || "Bonjour, nous avons bien reçu votre appel. Un conseiller vous contactera rapidement." }}' },
             ],
           },
           options: {},
@@ -719,7 +719,7 @@ function inboundCallReceptionWorkflowPayload() {
       },
       {
         id: successId,
-        name: "Réponse FinAdvisor",
+        name: "Réponse FinAssuro",
         type: "n8n-nodes-base.respondToWebhook",
         typeVersion: 1,
         position: [1040, 300],
@@ -731,7 +731,7 @@ function inboundCallReceptionWorkflowPayload() {
       },
     ],
     connections: {
-      "Réception appel FinAdvisor": {
+      "Réception appel FinAssuro": {
         main: [
           [
             { node: "Journal réception appel", type: "main", index: 0 },
@@ -743,7 +743,7 @@ function inboundCallReceptionWorkflowPayload() {
         main: [[{ node: "SMS accusé réception appel", type: "main", index: 0 }]],
       },
       "SMS accusé réception appel": {
-        main: [[{ node: "Réponse FinAdvisor", type: "main", index: 0 }]],
+        main: [[{ node: "Réponse FinAssuro", type: "main", index: 0 }]],
       },
     },
     settings: {
@@ -767,7 +767,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
   const inboundResponseId = "RespondRetellDynamicVariables"
   const postCallWebhookId = "RetellPostCallWebhook"
   const filterAnalyzedId = "FilterAnalyzedCalls"
-  const updateCrmId = "UpdateFinAdvisorPostCall"
+  const updateCrmId = "UpdateFinAssuroPostCall"
   const openAiPostCallId = "OpenAiMemoryQualityNote"
   const gmailGateId = "GmailNativeEnabledGate"
   const gmailPostCallId = "GmailNativeAdvisorSummary"
@@ -789,7 +789,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
         parameters: {
           width: 1320,
           height: 400,
-          content: "# Agent téléphonique pour assurance\n\nCe workflow automatise la préqualification de prospects en assurance, la gestion des appels entrants RetellAI, la mise à jour du dossier CRM et l'envoi d'un résumé au conseiller.\n\nMémoire : FinAdvisor renvoie à RetellAI les sujets CRM récents, les derniers appels, les tâches ouvertes et les notes utiles via les variables dynamiques conversation_memory, previous_topics, last_call_summary et open_tasks.\n\nPersonnalisation conseiller : FinAdvisor envoie aussi advisor_greeting, advisor_sms_notice, advisor_tone, advisor_booking_link, advisor_specialties, advisor_language, advisor_availability et advisor_qualification_type.\n\nImportant : l'agent vocal préqualifie et prépare le dossier. Il ne recommande pas de produit, ne donne pas de conseil personnalisé et ne conclut pas de vente.",
+          content: "# Agent téléphonique pour assurance\n\nCe workflow automatise la préqualification de prospects en assurance, la gestion des appels entrants RetellAI, la mise à jour du dossier CRM et l'envoi d'un résumé au conseiller.\n\nMémoire : FinAssuro renvoie à RetellAI les sujets CRM récents, les derniers appels, les tâches ouvertes et les notes utiles via les variables dynamiques conversation_memory, previous_topics, last_call_summary et open_tasks.\n\nPersonnalisation conseiller : FinAssuro envoie aussi advisor_greeting, advisor_sms_notice, advisor_tone, advisor_booking_link, advisor_specialties, advisor_language, advisor_availability et advisor_qualification_type.\n\nImportant : l'agent vocal préqualifie et prépare le dossier. Il ne recommande pas de produit, ne donne pas de conseil personnalisé et ne conclut pas de vente.",
         },
       },
       {
@@ -801,7 +801,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
         parameters: {
           width: 1320,
           height: 340,
-          content: "# Qualification sortante assurance\n\n1. Nouveau prospect reçu depuis FinAdvisor\n2. Validation consentement + téléphone\n3. SMS de préavis personnalisé par conseiller\n4. Attente selon le délai configuré par conseiller\n5. Appel RetellAI avec variables dynamiques\n\nLes numéros doivent être au format E.164.",
+          content: "# Qualification sortante assurance\n\n1. Nouveau prospect reçu depuis FinAssuro\n2. Validation consentement + téléphone\n3. SMS de préavis personnalisé par conseiller\n4. Attente selon le délai configuré par conseiller\n5. Appel RetellAI avec variables dynamiques\n\nLes numéros doivent être au format E.164.",
         },
       },
       {
@@ -814,7 +814,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
           color: 5,
           width: 1320,
           height: 330,
-          content: "# Appels entrants assurance\n\nRetellAI appelle ce webhook pour enrichir l'appel entrant. n8n interroge FinAdvisor par numéro de téléphone et retourne les variables dynamiques à RetellAI, y compris la mémoire CRM récente du client.",
+          content: "# Appels entrants assurance\n\nRetellAI appelle ce webhook pour enrichir l'appel entrant. n8n interroge FinAssuro par numéro de téléphone et retourne les variables dynamiques à RetellAI, y compris la mémoire CRM récente du client.",
         },
       },
       {
@@ -827,7 +827,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
           color: 4,
           width: 1560,
           height: 900,
-          content: "# Traitement post-appel assurance\n\nDéclenché par le webhook RetellAI quand l'appel est analysé.\n\nLe workflow envoie le résumé, la transcription, le score, l'urgence, les disponibilités et la prochaine action à FinAdvisor. L'API FinAdvisor crée ensuite la tâche conseiller, l'activité CRM, la notification, le SMS et le courriel Gmail/Resend.\n\nUne section OpenAI/Gmail native est aussi présente : OpenAI génère une note qualité optionnelle dans n8n, puis Gmail peut envoyer un courriel si GMAIL_N8N_ENABLED=true et si les identifiants Gmail n8n sont configurés.",
+          content: "# Traitement post-appel assurance\n\nDéclenché par le webhook RetellAI quand l'appel est analysé.\n\nLe workflow envoie le résumé, la transcription, le score, l'urgence, les disponibilités et la prochaine action à FinAssuro. L'API FinAssuro crée ensuite la tâche conseiller, l'activité CRM, la notification, le SMS et le courriel Gmail/Resend.\n\nUne section OpenAI/Gmail native est aussi présente : OpenAI génère une note qualité optionnelle dans n8n, puis Gmail peut envoyer un courriel si GMAIL_N8N_ENABLED=true et si les identifiants Gmail n8n sont configurés.",
         },
       },
       {
@@ -1048,7 +1048,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
           },
           sendBody: true,
           specifyBody: "json",
-          jsonBody: '={{ JSON.stringify({ model: $env.OPENAI_MODEL || "gpt-4.1-mini", temperature: 0.1, messages: [{ role: "system", content: "Tu aides un conseiller en assurance à réviser un appel RetellAI. Ne donne aucun conseil financier, fiscal, juridique ou d assurance. Résume seulement les faits, les anciens sujets utiles, les risques de conformité et la prochaine action." }, { role: "user", content: "Résumé FinAdvisor: " + (($json.data || $json).summary || "") + "\\nProchaine action: " + (($json.data || $json).nextAction || "") + "\\nTranscription: " + (($node[\\"Recevoir données post-appel RetellAI - Assurance\\"].json.body.call?.transcript || "").slice(0, 6000)) }] }) }}',
+          jsonBody: '={{ JSON.stringify({ model: $env.OPENAI_MODEL || "gpt-4.1-mini", temperature: 0.1, messages: [{ role: "system", content: "Tu aides un conseiller en assurance à réviser un appel RetellAI. Ne donne aucun conseil financier, fiscal, juridique ou d assurance. Résume seulement les faits, les anciens sujets utiles, les risques de conformité et la prochaine action." }, { role: "user", content: "Résumé FinAssuro: " + (($json.data || $json).summary || "") + "\\nProchaine action: " + (($json.data || $json).nextAction || "") + "\\nTranscription: " + (($node[\\"Recevoir données post-appel RetellAI - Assurance\\"].json.body.call?.transcript || "").slice(0, 6000)) }] }) }}',
           options: {},
         },
       },
@@ -1079,7 +1079,7 @@ function retellAssurancePhoneAgentWorkflowPayload() {
           sendTo: '={{ $node["Recevoir données post-appel RetellAI - Assurance"].json.body.call?.retell_llm_dynamic_variables?.advisor_email || ($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).advisorEmail || "conseiller@example.com" }}',
           subject: "Nouveau prospect assurance - résumé d'appel",
           emailType: "text",
-          message: '={{ "Nouveau résumé d appel assurance\\n\\nClient: " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).firstName || "") + " " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).lastName || "") + "\\nTéléphone: " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).phoneNumber || "") + "\\n\\nRésumé FinAdvisor:\\n" + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).summary || "") + "\\n\\nNote OpenAI n8n:\\n" + ($json.choices?.[0]?.message?.content || $json.error?.message || "Note OpenAI non disponible.") + "\\n\\nImportant: le conseiller doit valider les informations avant toute recommandation." }}',
+          message: '={{ "Nouveau résumé d appel assurance\\n\\nClient: " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).firstName || "") + " " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).lastName || "") + "\\nTéléphone: " + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).phoneNumber || "") + "\\n\\nRésumé FinAssuro:\\n" + (($node["Mettre à jour dossier assurance dans app"].json.data || $node["Mettre à jour dossier assurance dans app"].json).summary || "") + "\\n\\nNote OpenAI n8n:\\n" + ($json.choices?.[0]?.message?.content || $json.error?.message || "Note OpenAI non disponible.") + "\\n\\nImportant: le conseiller doit valider les informations avant toute recommandation." }}',
           options: {},
         },
       },

@@ -6,7 +6,7 @@ const RETELL_API_BASE = "https://api.retellai.com"
 const advisorPromptSection = `
 
 PARAMETRES PERSONNALISES DU CONSEILLER
-FinAdvisor peut envoyer des variables dynamiques propres au conseiller assigne.
+FinAssuro peut envoyer des variables dynamiques propres au conseiller assigne.
 
 Variables disponibles:
 - advisor_greeting: message d'accueil a utiliser au debut si fourni.
@@ -101,7 +101,7 @@ async function main() {
   const newAgent = await retellFetch("/create-agent", {
     method: "POST",
     body: JSON.stringify({
-      agent_name: "FinAdvisor - Emma - Assistant assurance - parametres conseiller",
+      agent_name: "FinAssuro - Emma - Assistant assurance - parametres conseiller",
       response_engine: {
         type: "retell-llm",
         llm_id: newLlm.llm_id,

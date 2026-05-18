@@ -96,11 +96,11 @@ export function publicCalendarLinks(booking: PublicCalendarBooking, origin: stri
 
 export function bookingIcs(booking: PublicCalendarBooking, origin: string) {
   const links = publicCalendarLinks(booking, origin)
-  const uid = `${booking.id}@finadvisor`
+  const uid = `${booking.id}@finassuro`
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//FinAdvisor CRM//Public Booking//FR",
+    "PRODID:-//FinAssuro CRM//Public Booking//FR",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

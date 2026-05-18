@@ -82,7 +82,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     <main className="grid min-h-screen gap-6 bg-[#f7f9fc] px-4 py-6 text-slate-950 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:px-8">
       <section className="order-2 mx-auto flex w-full max-w-md flex-col justify-center lg:order-1">
         <Link href="/" className="text-sm font-semibold text-slate-500 transition hover:text-slate-950">
-          FinAdvisor
+          FinAssuro
         </Link>
         <h1 className="mt-6 text-3xl font-semibold tracking-tight">Connexion SaaS</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">

@@ -92,7 +92,7 @@ export default async function SettingsPage() {
           isCustomAccess: Boolean(decodeModuleAccess(organization?.moduleAccess)),
         }}
         organization={{
-          name: organization?.name ?? "FinAdvisor CRM",
+          name: organization?.name ?? "FinAssuro CRM",
           legalName: organization?.legalName ?? "",
           businessNumber: organization?.businessNumber ?? "",
           phone: organization?.phone ?? "",

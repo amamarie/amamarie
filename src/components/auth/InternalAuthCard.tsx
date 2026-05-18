@@ -45,14 +45,14 @@ export function InternalAuthCard({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isResettingPassword, setIsResettingPassword] = useState(false)
 
-  const title = mode === "sign-up" ? `Créer l’accès ${targetLabel.toLowerCase()}` : "Connexion FinAdvisor"
+  const title = mode === "sign-up" ? `Créer l’accès ${targetLabel.toLowerCase()}` : "Connexion FinAssuro"
   const submitLabel = mode === "sign-up" ? "Créer l’accès et entrer" : "Se connecter"
   const helpText = useMemo(() => {
     if (role === "client") {
       return "Utilisez le même courriel que celui du dossier client. Le lien reçu par SMS ou courriel garde le dossier synchronisé."
     }
 
-    return "Utilisez le courriel de votre utilisateur FinAdvisor. Un compte existant peut recevoir un mot de passe interne de transition."
+    return "Utilisez le courriel de votre utilisateur FinAssuro. Un compte existant peut recevoir un mot de passe interne de transition."
   }, [role])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -141,7 +141,7 @@ export function InternalAuthCard({
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Session active:{" "}
           <span className="font-semibold text-slate-950">
-            {currentUser.name || currentUser.email || "utilisateur FinAdvisor"}
+            {currentUser.name || currentUser.email || "utilisateur FinAssuro"}
           </span>
         </p>
         <div className="mt-5 grid gap-2">

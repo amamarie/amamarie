@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
   const user = await prisma.user.findFirst({
     where: {
-      email: "admin.developpeur@finadvisor.local",
+      email: "admin.developpeur@finassuro.local",
       role: "DEVELOPER",
     },
     select: { id: true },

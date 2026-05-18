@@ -101,7 +101,7 @@ function fallbackQualification(input: QualifyLeadIntakeInput): LeadIntakeQualifi
     probableNeed,
     nextBestAction: isAppointment ? "Confirmer le besoin et proposer un rendez-vous" : "Contacter le prospect et confirmer le contexte de la demande",
     advisorTaskTitle: title,
-    advisorTaskDescription: `Qualification automatique FinAdvisor. Source: ${input.source}. Besoin probable: ${probableNeed}. Validation humaine obligatoire.`,
+    advisorTaskDescription: `Qualification automatique FinAssuro. Source: ${input.source}. Besoin probable: ${probableNeed}. Validation humaine obligatoire.`,
     followUpDelayHours: urgency === "URGENT" ? 24 : 48,
     clientSms: "Bonjour, merci pour votre demande. Nous l'avons bien reçue et un conseiller vous contactera dès que possible.",
     missingData,

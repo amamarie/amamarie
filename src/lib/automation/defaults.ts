@@ -71,7 +71,7 @@ export const automationTemplates: AutomationTemplate[] = [
           smsTemplate: "Bonjour {{firstName}}, merci pour votre demande. Votre conseiller a bien reçu votre formulaire et vous contactera sous peu.",
           emailSubject: "Votre demande a bien été reçue",
           emailHtml:
-            "<p>Bonjour {{firstName}},</p><p>Votre demande a bien été reçue par FinAdvisor. Un conseiller vous contactera sous peu.</p><p>Merci.</p>",
+            "<p>Bonjour {{firstName}},</p><p>Votre demande a bien été reçue par FinAssuro. Un conseiller vous contactera sous peu.</p><p>Merci.</p>",
           taskTitle: "Suivi formulaire web multicanal",
           taskDescription: "Prospect {{fullName}} créé depuis formulaire. Vérifier la demande, confirmer le besoin et documenter le prochain contact.",
           taskPriority: "HIGH",
@@ -91,7 +91,7 @@ export const automationTemplates: AutomationTemplate[] = [
   {
     id: "lead-form-ai-qualification-routing-n8n",
     name: "Formulaire web - qualification IA et routage n8n",
-    description: "Lorsqu’un prospect vient d’un formulaire web, n8n analyse le besoin, l’urgence et le budget, puis FinAdvisor assigne le bon conseiller.",
+    description: "Lorsqu’un prospect vient d’un formulaire web, n8n analyse le besoin, l’urgence et le budget, puis FinAssuro assigne le bon conseiller.",
     trigger: "LEAD_CREATED",
     conditions: { all: [{ field: "source", operator: "equals", value: "lead_form" }] },
     actions: [
@@ -209,7 +209,7 @@ export const automationTemplates: AutomationTemplate[] = [
   {
     id: "insurance-policy-delivery-needs-analysis",
     name: "Livraison police - analyse des besoins obligatoire",
-    description: "Quand un produit d’assurance devient actif, FinAdvisor vérifie qu’un rapport daté d’analyse des besoins a été remis/signé au client avant la livraison.",
+    description: "Quand un produit d’assurance devient actif, FinAssuro vérifie qu’un rapport daté d’analyse des besoins a été remis/signé au client avant la livraison.",
     trigger: "PRODUCT_STATUS_CHANGED",
     conditions: {
       all: [

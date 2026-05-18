@@ -5,7 +5,7 @@ export const DEMO_ORGANIZATION_SLUG = "demo"
 export const demoAdvisor = {
   id: DEMO_USER_ID,
   name: "Alexandre Conseiller",
-  email: "demo@finadvisorcrm.com",
+  email: "demo@finassuro.com",
   role: "Proprietaire",
 }
 

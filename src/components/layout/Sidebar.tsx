@@ -211,7 +211,7 @@ export function Sidebar({ collapsed = false, allowedModuleKeys, onCollapsedChang
           <Link
             href="/dashboard"
             onClick={onNavigate}
-            title="FinAdvisor CRM"
+            title="FinAssuro CRM"
             className={cn(
               "flex min-w-0 flex-1 items-center gap-3 rounded-[1.35rem] border-2 border-emerald-200 bg-white p-2.5 text-slate-950 shadow-[0_5px_0_#d9f99d] transition hover:bg-lime-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
               collapsed && "w-full flex-none justify-center p-2"
@@ -222,7 +222,7 @@ export function Sidebar({ collapsed = false, allowedModuleKeys, onCollapsedChang
               <span className="absolute -right-1 -top-1 size-3 rounded-full border-2 border-white bg-emerald-400" />
             </span>
             <span className={cn("min-w-0", collapsed && "sr-only")}>
-              <span className="block truncate text-[15px] font-black">FinAdvisor</span>
+              <span className="block truncate text-[15px] font-black">FinAssuro</span>
               <span className="block truncate text-xs font-bold text-slate-500">CRM conseiller</span>
             </span>
           </Link>

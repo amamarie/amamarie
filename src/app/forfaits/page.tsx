@@ -4,7 +4,7 @@ import { PricingPage } from "@/components/pricing/PricingPage"
 import { getPublicPricingMode, getSubscriptionPlanPriceOverrides } from "@/lib/platform-settings"
 
 export const metadata: Metadata = {
-  title: "Forfaits FinAdvisor",
+  title: "Forfaits FinAssuro",
   description: "Forfaits SaaS pour CRM, calendrier et marketing de conseillers en assurance et produits financiers.",
 }
 

@@ -61,12 +61,12 @@ async function main() {
   })
 
   const alex = await prisma.user.upsert({
-    where: { email: "alex.roy@finadvisor.ca" },
+    where: { email: "alex.roy@finassuro.ca" },
     update: { organizationId: organization.id },
     create: {
       organizationId: organization.id,
       name: "Alex Roy",
-      email: "alex.roy@finadvisor.ca",
+      email: "alex.roy@finassuro.ca",
       role: UserRole.ADVISOR,
     },
   })
@@ -389,7 +389,7 @@ async function main() {
     ],
   })
 
-  console.log("Seed complete for FinAdvisor CRM demo organization.")
+  console.log("Seed complete for FinAssuro CRM demo organization.")
 }
 
 main()

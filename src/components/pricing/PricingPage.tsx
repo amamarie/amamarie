@@ -191,7 +191,7 @@ export function PricingPage({
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(() => normalizeInterval(autoCheckout?.interval))
   const prices = subscriptionPrices[mode]
   const isBeta = mode === "beta"
-  const pageTitle = isBeta ? "Offre bêta FinAdvisor" : "Forfaits FinAdvisor"
+  const pageTitle = isBeta ? "Offre bêta FinAssuro" : "Forfaits FinAssuro"
   const badge = isBeta ? "Prix bêta garantis 12 mois" : "Grille tarifaire normale"
   const subtitle = isBeta
     ? "Lancez votre cabinet avec un tarif réduit en échange de retours réguliers sur le produit."
@@ -229,7 +229,7 @@ export function PricingPage({
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
             <span>
-              <span className="block text-sm font-semibold text-slate-950">FinAdvisor</span>
+              <span className="block text-sm font-semibold text-slate-950">FinAssuro</span>
               <span className="block text-xs font-medium text-slate-500">CRM + calendrier + marketing</span>
             </span>
           </Link>

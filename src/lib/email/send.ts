@@ -19,7 +19,7 @@ export function isResendConfigured(apiKey = process.env.RESEND_API_KEY) {
 
 export async function sendTransactionalEmail({ to, from: customFrom, replyTo, cc, bcc, subject, text, html }: SendTransactionalEmailInput) {
   const apiKey = process.env.RESEND_API_KEY?.trim()
-  const from = customFrom || process.env.EMAIL_FROM || "FinAdvisor CRM <no-reply@finadvisor.local>"
+  const from = customFrom || process.env.EMAIL_FROM || "FinAssuro CRM <no-reply@finassuro.local>"
 
   if (!isResendConfigured(apiKey)) {
     throw new Error("EMAIL_NOT_CONFIGURED")

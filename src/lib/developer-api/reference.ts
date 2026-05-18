@@ -46,7 +46,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 409, label: "Contact déjà existant" },
       { code: 429, label: "Limite API dépassée" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/contacts" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/contacts" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"first_name":"Jean","last_name":"Martin","email":"jean.martin@example.com","source":"site_web"}'`,
@@ -80,7 +80,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 403, label: "Permission deals:create requise" },
       { code: 422, label: "Contact introuvable ou champ manquant" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/deals" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/deals" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"contact_id":"contact_01HX9M7YQK","title":"Projet PER","amount":2500}'`,
@@ -111,7 +111,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 403, label: "Permission tasks:create requise" },
       { code: 422, label: "Date ou assignation invalide" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/tasks" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/tasks" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"contact_id":"contact_01HX9M7YQK","title":"Relancer Jean Martin","priority":"high"}'`,
@@ -142,7 +142,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 403, label: "Permission appointments:create requise" },
       { code: 422, label: "Contact ou conseiller introuvable" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/appointments" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/appointments" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"contact_id":"contact_01HX9M7YQK","title":"Bilan retraite","starts_at":"2026-05-22T09:00:00Z","ends_at":"2026-05-22T09:45:00Z"}'`,
@@ -168,7 +168,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 400, label: "Nom manquant" },
       { code: 403, label: "Permission campaigns:create requise" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/campaigns" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/campaigns" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"name":"Campagne retraite","topic":"retraite"}'`,
@@ -194,7 +194,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 409, label: "Contact déjà abonné" },
       { code: 422, label: "Consentement requis" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/campaigns/campaign_123/subscribers" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/campaigns/campaign_123/subscribers" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"contact_id":"contact_01HX9M7YQK","consent_confirmed":true}'`,
@@ -219,7 +219,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 403, label: "Permission documents:request requise" },
       { code: 422, label: "Contact ou type de document manquant" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/documents" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/documents" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"contact_id":"contact_01HX9M7YQK","document_type":"identity_card"}'`,
@@ -247,7 +247,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 403, label: "Permission webhooks:create requise" },
       { code: 429, label: "Limite de webhooks actifs atteinte" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/v1/webhooks" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/v1/webhooks" \\
   -H "Authorization: Bearer sk_live_xxxxxxxxx" \\
   -H "Content-Type: application/json" \\
   -d '{"name":"Make leads","url":"https://hook.make.com/xxxxx","events":["contact.created"]}'`,
@@ -274,7 +274,7 @@ export const developerEndpointReference: DeveloperEndpointReference[] = [
       { code: 400, label: "grant_type invalide" },
       { code: 401, label: "client_id ou client_secret invalide" },
     ],
-    copyCurl: `curl -X POST "https://api.finadvisor.app/oauth/token" \\
+    copyCurl: `curl -X POST "https://api.finassuro.com/oauth/token" \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "grant_type=client_credentials&client_id=oauth_client_xxxxx&client_secret=oauth_secret_xxxxx"`,
   },
