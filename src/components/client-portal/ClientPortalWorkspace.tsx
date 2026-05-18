@@ -32,6 +32,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+type PortalNavItem = {
+  id: string
+  icon: LucideIcon
+  title: string
+  detail: string
+  count: string
+  tone: "emerald" | "amber" | "sky" | "violet" | "slate"
+}
+
 type PortalClient = {
   id: string
   firstName: string
@@ -588,7 +597,32 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
       count: `${client.activities.length} événement${client.activities.length > 1 ? "s" : ""}`,
       tone: "violet",
     },
-  ] satisfies Array<{ id: string; icon: LucideIcon; title: string; detail: string; count: string; tone: "emerald" | "amber" | "sky" | "violet" | "slate" }>
+  ] satisfies PortalNavItem[]
+  const portalNavItems = [
+    dossierFolders[0],
+    dossierFolders[1],
+    dossierFolders[4],
+    {
+      id: "portal-upload",
+      icon: UploadCloud,
+      title: "Téléverser",
+      detail: requiredDocuments.length > 0 ? "Répondre aux demandes" : "Ajouter un fichier",
+      count: requiredDocuments.length > 0 ? `${requiredDocuments.length} requis` : "Prêt",
+      tone: requiredDocuments.length > 0 ? "amber" : "emerald",
+    },
+    dossierFolders[2],
+    dossierFolders[3],
+    {
+      id: "portal-recommendations",
+      icon: FileCheck2,
+      title: "Recommandations",
+      detail: client.productRecommendations.length > 0 ? "Rapports et décisions" : "Aucune en attente",
+      count: `${client.productRecommendations.length}`,
+      tone: client.productRecommendations.length > 0 ? "sky" : "slate",
+    },
+    dossierFolders[5],
+    dossierFolders[6],
+  ] satisfies PortalNavItem[]
 
   const advisorInitials = useMemo(() => {
     const name = client.advisor?.name ?? "Conseiller"
@@ -966,68 +1000,12 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </div>
         ) : null}
 
-        <section className="mb-5 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+          <div className="grid gap-5 bg-slate-950 p-5 text-white lg:grid-cols-[1fr_360px]">
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">{isPreview ? "Actions conseiller" : "Actions rapides"}</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                {isPreview
-                  ? "Gérez l’accès client, ouvrez le CRM et ajoutez de l’information au portail sans changer de contexte."
-                  : "Accédez rapidement aux messages, documents, consentements et coordonnées de votre conseiller."}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {isPreview ? (
-                <>
-                  <Button asChild variant="outline" className="rounded-xl bg-white">
-                    <a href={`/clients/${client.id}`} target="_blank" rel="noreferrer">
-                      <ExternalLink className="size-4" />
-                      Ouvrir le dossier CRM
-                    </a>
-                  </Button>
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={copyPortalLink} disabled={isCopyingPortalLink}>
-                    {isCopyingPortalLink ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
-                    Copier le lien client
-                  </Button>
-                  <Button type="button" className="rounded-xl bg-slate-950 text-white hover:bg-slate-800" onClick={resendPortalInvitation} disabled={isSendingInvitation}>
-                    {isSendingInvitation ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                    Envoyer formulaire profil client
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={() => scrollToSection("portal-profile-questionnaire")}>
-                    <UserRoundCheck className="size-4" />
-                    Profil client
-                  </Button>
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={() => scrollToSection("portal-message")}>
-                    <MessageSquareText className="size-4" />
-                    Message
-                  </Button>
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={() => scrollToSection("portal-upload")}>
-                    <UploadCloud className="size-4" />
-                    Documents
-                  </Button>
-                  <Button type="button" variant="outline" className="rounded-xl bg-white" onClick={() => scrollToSection("portal-consents")}>
-                    <CheckSquare className="size-4" />
-                    Consentements
-                  </Button>
-                  <Button type="button" className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => router.refresh()}>
-                    <RefreshCw className="size-4" />
-                    Rafraîchir
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-[2rem] border-2 border-emerald-200 bg-white shadow-[0_10px_0_#d9f99d]">
-          <div className="grid gap-5 bg-emerald-500 p-5 text-white lg:grid-cols-[1fr_360px]">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Portail client</p>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-200">Portail client</p>
               <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Bonjour {greetingName}</h1>
-              <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
+              <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
                 Votre dossier est relié au CRM de votre conseiller. Vous pouvez transmettre des informations, ajouter des documents et suivre les étapes sans accéder à l’interface interne du cabinet.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -1036,16 +1014,16 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                 <HeroInfo icon={Phone} label="Téléphone conseiller" value={formatPhone(advisorPhone)} />
               </div>
             </div>
-            <div className="rounded-[1.5rem] border-2 border-white/30 bg-white/15 p-4">
+            <div className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-4xl font-black">{completion} %</p>
-                  <p className="text-sm font-bold text-emerald-50">Progression du dossier</p>
+                  <p className="text-sm font-bold text-slate-300">Progression du dossier</p>
                 </div>
                 <span className="grid size-14 place-items-center rounded-full bg-white text-lg font-black text-emerald-700">{advisorInitials}</span>
               </div>
               <div className="mt-4 h-4 overflow-hidden rounded-full bg-white/20">
-                <div className="h-full rounded-full bg-white" style={{ width: `${Math.max(6, completion)}%` }} />
+                <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.max(6, completion)}%` }} />
               </div>
               <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold leading-5 text-emerald-50">
                 Prochaine action: {nextAction}
@@ -1067,27 +1045,23 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           ))}
         </section>
 
-        <section className="mt-6 rounded-[2rem] border-2 border-slate-200 bg-white p-5 shadow-[0_8px_0_#e2e8f0]">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Mon dossier</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Tout est classé par sujet</h2>
-              <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                Ouvrez un dossier pour consulter, confirmer ou transmettre les informations liées au suivi avec votre conseiller.
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
-              Synchronisé avec le CRM
-            </span>
-          </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {dossierFolders.map((folder) => (
-              <DossierFolderCard key={folder.id} folder={folder} onOpen={() => scrollToSection(folder.id)} />
-            ))}
-          </div>
-        </section>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+          <PortalSidebar
+            items={portalNavItems}
+            completion={completion}
+            nextAction={nextAction}
+            isPreview={isPreview}
+            clientId={client.id}
+            isCopyingPortalLink={isCopyingPortalLink}
+            isSendingInvitation={isSendingInvitation}
+            onOpen={scrollToSection}
+            onRefresh={() => router.refresh()}
+            onCopyPortalLink={copyPortalLink}
+            onResendPortalInvitation={resendPortalInvitation}
+          />
 
-        <section className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div className="min-w-0 space-y-6">
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <div className="space-y-5">
             <Panel id="portal-profile-questionnaire" title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
               <div className={profileMissingItems.length > 0 ? "mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" : "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"}>
@@ -1385,7 +1359,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
           </div>
         </section>
 
-        <section className="mt-6 grid gap-5 xl:grid-cols-3">
+            <section className="grid gap-5 xl:grid-cols-3">
           <Panel id="portal-documents" title="Documents au dossier" description="Documents reçus, demandés ou validés.">
             <div className="space-y-3">
               {client.documents.length === 0 ? <EmptyLine text="Aucun document visible pour le moment." /> : null}
@@ -1659,8 +1633,136 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
             </div>
           </Panel>
         </section>
+          </div>
+        </div>
       </section>
     </main>
+  )
+}
+
+function PortalSidebar({
+  items,
+  completion,
+  nextAction,
+  isPreview,
+  clientId,
+  isCopyingPortalLink,
+  isSendingInvitation,
+  onOpen,
+  onRefresh,
+  onCopyPortalLink,
+  onResendPortalInvitation,
+}: {
+  items: PortalNavItem[]
+  completion: number
+  nextAction: string
+  isPreview: boolean
+  clientId: string
+  isCopyingPortalLink: boolean
+  isSendingInvitation: boolean
+  onOpen: (sectionId: string) => void
+  onRefresh: () => void
+  onCopyPortalLink: () => void
+  onResendPortalInvitation: () => void
+}) {
+  return (
+    <aside className="min-w-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Navigation</p>
+            <h2 className="mt-1 text-lg font-black tracking-tight text-slate-950">Dossier client</h2>
+          </div>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+            {completion} %
+          </span>
+        </div>
+
+        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(6, completion)}%` }} />
+        </div>
+        <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">
+          Prochaine action: <span className="font-black text-slate-950">{nextAction}</span>
+        </p>
+
+        <nav className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1" aria-label="Sections du portail client">
+          {items.map((item) => (
+            <PortalSidebarItem key={item.id} item={item} onOpen={() => onOpen(item.id)} />
+          ))}
+        </nav>
+
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+            {isPreview ? "Actions conseiller" : "Actions rapides"}
+          </p>
+          <div className="mt-3 grid gap-2">
+            {isPreview ? (
+              <>
+                <Button asChild variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5">
+                  <a href={`/clients/${clientId}`} target="_blank" rel="noreferrer">
+                    <ExternalLink className="size-4 shrink-0" />
+                    Ouvrir le dossier CRM
+                  </a>
+                </Button>
+                <Button type="button" variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5" onClick={onCopyPortalLink} disabled={isCopyingPortalLink}>
+                  {isCopyingPortalLink ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <Copy className="size-4 shrink-0" />}
+                  Copier le lien client
+                </Button>
+                <Button type="button" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-slate-950 px-3 py-2 text-left text-xs font-black leading-5 text-white hover:bg-slate-800" onClick={onResendPortalInvitation} disabled={isSendingInvitation}>
+                  {isSendingInvitation ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <Send className="size-4 shrink-0" />}
+                  Envoyer formulaire profil client
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="button" variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5" onClick={() => onOpen("portal-message")}>
+                  <MessageSquareText className="size-4 shrink-0" />
+                  Écrire au conseiller
+                </Button>
+                <Button type="button" variant="outline" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-white px-3 py-2 text-left text-xs font-black leading-5" onClick={() => onOpen("portal-upload")}>
+                  <UploadCloud className="size-4 shrink-0" />
+                  Ajouter un document
+                </Button>
+                <Button type="button" className="h-auto min-h-10 justify-start whitespace-normal rounded-xl bg-emerald-600 px-3 py-2 text-left text-xs font-black leading-5 text-white hover:bg-emerald-700" onClick={onRefresh}>
+                  <RefreshCw className="size-4 shrink-0" />
+                  Rafraîchir le dossier
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+function PortalSidebarItem({ item, onOpen }: { item: PortalNavItem; onOpen: () => void }) {
+  const Icon = item.icon
+  const toneClass = {
+    emerald: "text-emerald-700 bg-emerald-50 ring-emerald-100",
+    amber: "text-amber-700 bg-amber-50 ring-amber-100",
+    sky: "text-sky-700 bg-sky-50 ring-sky-100",
+    violet: "text-violet-700 bg-violet-50 ring-violet-100",
+    slate: "text-slate-700 bg-slate-50 ring-slate-200",
+  }[item.tone]
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2.5 text-left transition hover:border-emerald-200 hover:bg-emerald-50"
+    >
+      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ring-1 ${toneClass}`}>
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-black text-slate-950">{item.title}</span>
+        <span className="block truncate text-xs font-semibold text-slate-500">{item.detail}</span>
+      </span>
+      <span className="max-w-20 shrink-0 truncate rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-black text-slate-600">
+        {item.count}
+      </span>
+    </button>
   )
 }
 
