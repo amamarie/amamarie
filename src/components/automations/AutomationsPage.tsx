@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { LucideIcon } from "lucide-react"
-import { Bot, CheckCircle2, Filter, Grid3X3, History, List, Loader2, PhoneCall, Play, Power, PowerOff, RefreshCcw, Search, Sparkles, Trash2, TriangleAlert, Wrench } from "lucide-react"
+import { Bot, CheckCircle2, Filter, Grid3X3, History, List, Loader2, Play, Power, PowerOff, RefreshCcw, Search, Sparkles, Trash2, TriangleAlert, Wrench } from "lucide-react"
 
 import { PageShell, StatusBadge } from "@/components/crm/page-shell"
 import { Button } from "@/components/ui/button"
@@ -260,58 +260,6 @@ export function AutomationsPage() {
     }
   }
 
-  const syncInboundCallN8n = async () => {
-    setSavingId("n8n-inbound-call-sync")
-    setError(null)
-    setMessage(null)
-    try {
-      await readResponse(await fetch("/api/automations/n8n/inbound-call/sync", { method: "POST" }))
-      setMessage("Workflow n8n de réception d’appel synchronisé.")
-      await load()
-    } catch (syncError) {
-      setError(syncError instanceof Error ? syncError.message : "Synchronisation n8n impossible.")
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const syncRetellAssuranceN8n = async () => {
-    setSavingId("n8n-retell-assurance-sync")
-    setError(null)
-    setMessage(null)
-    try {
-      await readResponse(await fetch("/api/automations/n8n/retell-assurance/sync", { method: "POST" }))
-      setMessage("Workflow n8n RetellAI assurance synchronisé.")
-      await load()
-    } catch (syncError) {
-      setError(syncError instanceof Error ? syncError.message : "Synchronisation RetellAI n8n impossible.")
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const testInboundCallN8n = async () => {
-    setSavingId("n8n-inbound-call-test")
-    setError(null)
-    setMessage(null)
-    try {
-      const result = await readResponse(await fetch("/api/automations/n8n/inbound-call/test", { method: "POST" })) as {
-        automation?: AutomationTestResult
-        tasks?: Array<{ id: string }>
-      }
-      setMessage(
-        result.automation?.executedRules
-          ? `Test appel n8n exécuté: ${result.automation.actionsExecuted ?? 0} action(s), ${result.tasks?.length ?? 0} tâche(s).`
-          : "Test appel créé, mais aucune règle n’a été exécutée. Installez les règles par défaut ou activez la règle d’appel."
-      )
-      await load()
-    } catch (testError) {
-      setError(testError instanceof Error ? testError.message : "Test appel n8n impossible.")
-    } finally {
-      setSavingId(null)
-    }
-  }
-
   const testRule = async (rule: AutomationRule) => {
     setSavingId(`test-${rule.id}`)
     setError(null)
@@ -370,7 +318,7 @@ export function AutomationsPage() {
   }
 
   return (
-    <PageShell eyebrow="Automatisations" title="Centre d’automatisation" description="Pilotez les suivis automatiques, les règles actives et les modèles disponibles." showIntro={false}>
+    <PageShell eyebrow="Admin cabinet" title="Règles métier automatisées" description="Activez les scénarios utiles au cabinet sans exposer les détails techniques n8n, RetellAI ou webhooks." showIntro={false}>
       <div className="w-full min-w-0 max-w-full space-y-5 overflow-hidden">
         {message ? <Notice tone="emerald">{message}</Notice> : null}
         {error ? <Notice tone="rose">{error}</Notice> : null}
@@ -379,10 +327,10 @@ export function AutomationsPage() {
           <div className="border-b-2 border-emerald-100 bg-white p-5">
             <div className="grid gap-5 xl:grid-cols-[1fr_300px] xl:items-stretch">
               <div className="rounded-[1.75rem] border-2 border-emerald-200 bg-emerald-500 p-5 text-white shadow-[0_8px_0_#16a34a]">
-                <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Automatisations CRM</p>
-                <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Règles installées et modèles disponibles</h1>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Admin cabinet</p>
+                <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Règles métier simples</h1>
                 <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
-                  Une automatisation installée apparaît seulement dans les règles actives ou inactives. Les modèles disponibles excluent les règles déjà installées pour éviter les doublons.
+                  L’admin choisit les comportements métier du cabinet. Le moteur technique, les workflows n8n, RetellAI, secrets et journaux restent dans l’interface développeur.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {["Prospects", "Clients", "Documents", "Tâches", "Conformité"].map((step) => (
@@ -398,18 +346,6 @@ export function AutomationsPage() {
                   <Button className="rounded-full bg-slate-950 px-5 font-black text-white shadow-[0_6px_0_#020617] hover:bg-slate-800" onClick={() => void installDefaults()} disabled={savingId === "defaults"}>
                     {savingId === "defaults" ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
                     Installer les règles par défaut
-                  </Button>
-                  <Button variant="outline" className="rounded-full border-2 border-white bg-white font-black text-emerald-700 hover:bg-emerald-50" onClick={() => void syncInboundCallN8n()} disabled={savingId === "n8n-inbound-call-sync"}>
-                    {savingId === "n8n-inbound-call-sync" ? <Loader2 className="size-4 animate-spin" /> : <PhoneCall className="size-4" />}
-                    Sync appel n8n
-                  </Button>
-                  <Button variant="outline" className="rounded-full border-2 border-white bg-white font-black text-emerald-700 hover:bg-emerald-50" onClick={() => void syncRetellAssuranceN8n()} disabled={savingId === "n8n-retell-assurance-sync"}>
-                    {savingId === "n8n-retell-assurance-sync" ? <Loader2 className="size-4 animate-spin" /> : <Bot className="size-4" />}
-                    Sync RetellAI
-                  </Button>
-                  <Button variant="outline" className="rounded-full border-2 border-white bg-white font-black text-emerald-700 hover:bg-emerald-50" onClick={() => void testInboundCallN8n()} disabled={savingId === "n8n-inbound-call-test"}>
-                    {savingId === "n8n-inbound-call-test" ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-                    Tester appel
                   </Button>
                 </div>
               </div>

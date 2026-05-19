@@ -8,6 +8,7 @@ import {
   Sparkles,
   TerminalSquare,
   UsersRound,
+  Workflow,
   type LucideIcon,
 } from "lucide-react"
 
@@ -95,8 +96,9 @@ export default async function DeveloperConsolePage({ searchParams }: DeveloperCo
                   Vue compacte des cabinets, accès, santé produit, forfaits et activité technique. Les détails sont séparés par page.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-4">
                 <NavCard href="/developpeur/api" icon={TerminalSquare} title="API" text="Clés, webhooks, sandbox" />
+                <NavCard href="/developpeur/automatisations" icon={Workflow} title="Automatisations" text="n8n, Retell, logs" />
                 <NavCard href="/developpeur/cabinets" icon={Building2} title="Cabinets" text="Forfaits et accès" />
                 <NavCard href="/developpeur/journal" icon={Activity} title="Journal" text="Audit et événements" />
               </div>

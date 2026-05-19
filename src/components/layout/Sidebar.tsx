@@ -62,7 +62,7 @@ const sectionDefinitions = [
   },
   {
     title: "Croissance",
-    hrefs: ["/communications", "/marketing", "/formulaires", "/automatisations"],
+    hrefs: ["/communications", "/marketing", "/formulaires"],
   },
   {
     title: "Gestion",

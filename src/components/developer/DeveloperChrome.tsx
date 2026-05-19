@@ -2,12 +2,13 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { ArrowLeft, Code2, type LucideIcon } from "lucide-react"
 
-type DeveloperNavKey = "vue" | "api" | "cabinets" | "plans" | "journal"
+type DeveloperNavKey = "vue" | "api" | "automatisations" | "cabinets" | "plans" | "journal"
 type Tone = "emerald" | "rose" | "amber" | "violet" | "slate"
 
 const navLinks = [
   { key: "vue", label: "Vue", href: "/developpeur" },
   { key: "api", label: "API", href: "/developpeur/api" },
+  { key: "automatisations", label: "Automatisations", href: "/developpeur/automatisations" },
   { key: "cabinets", label: "Cabinets", href: "/developpeur/cabinets" },
   { key: "plans", label: "Plans", href: "/developpeur/plans" },
   { key: "journal", label: "Journal", href: "/developpeur/journal" },
