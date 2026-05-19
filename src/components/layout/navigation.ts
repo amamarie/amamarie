@@ -15,7 +15,6 @@ import {
   Lightbulb,
   Megaphone,
   MessagesSquare,
-  PhoneCall,
   KanbanSquare,
   PackageCheck,
   PieChart,
@@ -159,11 +158,11 @@ export const navigationItems: NavigationItem[] = [
     message: "Événements importants et suivis à consulter.",
   },
   {
-    label: "Communications",
+    label: "Messages",
     href: "/communications",
-    icon: PhoneCall,
+    icon: MessagesSquare,
     moduleKey: "communications",
-    message: "Appels entrants, appels manqués et SMS Twilio.",
+    message: "Inbox intelligente, courriels à traiter, appels et SMS.",
   },
   {
     label: "Marketing CRM",

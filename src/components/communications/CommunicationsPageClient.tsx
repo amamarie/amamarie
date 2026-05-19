@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Archive, CheckCircle2, FileText, Inbox, Mail, MessageSquare, PhoneCall, RefreshCw, Search, Send, Settings, Sparkles, Trash2 } from "lucide-react"
+import { AlertTriangle, Archive, CheckCircle2, Clock3, FileText, Inbox, Mail, MessageSquare, PhoneCall, RefreshCw, Search, Send, Settings, Sparkles, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 
@@ -76,6 +76,7 @@ export function CommunicationsPageClient() {
   const [activeFilter, setActiveFilter] = useState<InboxFilter>("to-process")
   const [isSyncingGmail, setIsSyncingGmail] = useState(false)
   const [updatingEmailId, setUpdatingEmailId] = useState<string | null>(null)
+  const [creatingTaskEmailId, setCreatingTaskEmailId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -262,6 +263,53 @@ export function CommunicationsPageClient() {
     }
   }
 
+  async function createTaskFromEmail(conversation: Conversation, event: ConversationEvent) {
+    setCreatingTaskEmailId(event.id)
+    setError(null)
+    setNotice(null)
+    try {
+      const dueDate = new Date()
+      dueDate.setDate(dueDate.getDate() + (event.priority === "HIGH" || event.inboxType === "URGENT" ? 0 : 1))
+      dueDate.setHours(9, 0, 0, 0)
+
+      const taskType = event.inboxType === "DOCUMENT"
+        ? "DOCUMENT"
+        : event.inboxType === "RENDEZ_VOUS"
+          ? "MEETING"
+          : "EMAIL"
+      const priority = event.priority === "HIGH"
+        ? "HIGH"
+        : event.inboxType === "URGENT"
+          ? "URGENT"
+          : "NORMAL"
+
+      await readJson(await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Traiter le courriel: ${event.title}`,
+          description: [
+            `Expéditeur: ${event.from ?? conversation.email ?? "Non renseigné"}`,
+            event.summary ? `Résumé: ${event.summary}` : null,
+            event.recommendedAction ? `Action recommandée: ${event.recommendedAction}` : null,
+            event.body ? `Aperçu: ${event.body}` : null,
+          ].filter(Boolean).join("\n\n"),
+          type: taskType,
+          priority,
+          dueDate: dueDate.toISOString(),
+          clientId: conversation.client?.id,
+          leadId: conversation.lead?.id,
+        }),
+      }))
+      await updateEmailStatus(event.id, "PLANNED")
+      setNotice("Tâche créée et courriel placé dans les messages planifiés.")
+    } catch (taskError) {
+      setError(taskError instanceof Error ? taskError.message : "Impossible de créer la tâche depuis ce courriel.")
+    } finally {
+      setCreatingTaskEmailId(null)
+    }
+  }
+
   async function sendReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedConversation) return
@@ -443,7 +491,13 @@ export function CommunicationsPageClient() {
           </aside>
 
           <main className="flex min-w-0 flex-col bg-white">
-            <ConversationThread conversation={selectedConversation} updatingEmailId={updatingEmailId} onUpdateEmailStatus={updateEmailStatus} />
+            <ConversationThread
+              conversation={selectedConversation}
+              updatingEmailId={updatingEmailId}
+              creatingTaskEmailId={creatingTaskEmailId}
+              onUpdateEmailStatus={updateEmailStatus}
+              onCreateTaskFromEmail={createTaskFromEmail}
+            />
             {selectedConversation ? <ReplyComposer conversation={selectedConversation} isSendingReply={isSendingReply} onSubmit={sendReply} /> : null}
           </main>
           </div>
@@ -639,11 +693,15 @@ function ConversationButton({
 function ConversationThread({
   conversation,
   updatingEmailId,
+  creatingTaskEmailId,
   onUpdateEmailStatus,
+  onCreateTaskFromEmail,
 }: {
   conversation: Conversation | null
   updatingEmailId: string | null
+  creatingTaskEmailId: string | null
   onUpdateEmailStatus: (eventId: string, status: "DONE" | "ARCHIVED" | "PLANNED" | "WAITING") => Promise<void>
+  onCreateTaskFromEmail: (conversation: Conversation, event: ConversationEvent) => Promise<void>
 }) {
   if (!conversation) {
     return (
@@ -722,6 +780,10 @@ function ConversationThread({
                       <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "DONE")}>
                         <CheckCircle2 className="size-3.5" />
                         Traité
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" disabled={creatingTaskEmailId === event.id || updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onCreateTaskFromEmail(conversation, event)}>
+                        {creatingTaskEmailId === event.id ? <RefreshCw className="size-3.5 animate-spin" /> : <Clock3 className="size-3.5" />}
+                        Créer tâche
                       </Button>
                       <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "PLANNED")}>
                         <RefreshCw className="size-3.5" />
