@@ -77,6 +77,7 @@ export function CommunicationsPageClient() {
   const [isSyncingGmail, setIsSyncingGmail] = useState(false)
   const [updatingEmailId, setUpdatingEmailId] = useState<string | null>(null)
   const [creatingTaskEmailId, setCreatingTaskEmailId] = useState<string | null>(null)
+  const [creatingLeadEmailId, setCreatingLeadEmailId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -310,6 +311,37 @@ export function CommunicationsPageClient() {
     }
   }
 
+  async function createLeadFromEmail(conversation: Conversation, event: ConversationEvent) {
+    const suggestedName = conversation.name !== "Non associé"
+      ? conversation.name
+      : (conversation.email ?? event.from ?? "").split("@")[0]?.replace(/[._-]+/g, " ") || "Nouveau prospect"
+    const fullName = window.prompt("Nom du prospect à créer", suggestedName)
+    if (!fullName) return
+    const phone = window.prompt("Téléphone du prospect au format international", conversation.phone ?? "")
+    if (!phone) return
+
+    const parts = fullName.trim().split(/\s+/).filter(Boolean)
+    const firstName = parts[0] || "Nouveau"
+    const lastName = parts.slice(1).join(" ") || "prospect"
+
+    setCreatingLeadEmailId(event.id)
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await readJson<{ lead: { id: string; firstName: string; lastName: string } }>(await fetch(`/api/communications/email-activities/${event.id}/create-lead`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, phone }),
+      }))
+      setNotice(`Prospect créé: ${result.lead.firstName} ${result.lead.lastName}. Le courriel est maintenant lié au CRM.`)
+      await load()
+    } catch (leadError) {
+      setError(leadError instanceof Error ? leadError.message : "Impossible de créer le prospect depuis ce courriel.")
+    } finally {
+      setCreatingLeadEmailId(null)
+    }
+  }
+
   async function sendReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedConversation) return
@@ -495,8 +527,10 @@ export function CommunicationsPageClient() {
               conversation={selectedConversation}
               updatingEmailId={updatingEmailId}
               creatingTaskEmailId={creatingTaskEmailId}
+              creatingLeadEmailId={creatingLeadEmailId}
               onUpdateEmailStatus={updateEmailStatus}
               onCreateTaskFromEmail={createTaskFromEmail}
+              onCreateLeadFromEmail={createLeadFromEmail}
             />
             {selectedConversation ? <ReplyComposer conversation={selectedConversation} isSendingReply={isSendingReply} onSubmit={sendReply} /> : null}
           </main>
@@ -694,14 +728,18 @@ function ConversationThread({
   conversation,
   updatingEmailId,
   creatingTaskEmailId,
+  creatingLeadEmailId,
   onUpdateEmailStatus,
   onCreateTaskFromEmail,
+  onCreateLeadFromEmail,
 }: {
   conversation: Conversation | null
   updatingEmailId: string | null
   creatingTaskEmailId: string | null
+  creatingLeadEmailId: string | null
   onUpdateEmailStatus: (eventId: string, status: "DONE" | "ARCHIVED" | "PLANNED" | "WAITING") => Promise<void>
   onCreateTaskFromEmail: (conversation: Conversation, event: ConversationEvent) => Promise<void>
+  onCreateLeadFromEmail: (conversation: Conversation, event: ConversationEvent) => Promise<void>
 }) {
   if (!conversation) {
     return (
@@ -785,6 +823,12 @@ function ConversationThread({
                         {creatingTaskEmailId === event.id ? <RefreshCw className="size-3.5 animate-spin" /> : <Clock3 className="size-3.5" />}
                         Créer tâche
                       </Button>
+                      {conversation.type === "UNASSIGNED" ? (
+                        <Button type="button" size="sm" variant="outline" disabled={creatingLeadEmailId === event.id || updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onCreateLeadFromEmail(conversation, event)}>
+                          {creatingLeadEmailId === event.id ? <RefreshCw className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                          Créer prospect
+                        </Button>
+                      ) : null}
                       <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "PLANNED")}>
                         <RefreshCw className="size-3.5" />
                         Reporter
