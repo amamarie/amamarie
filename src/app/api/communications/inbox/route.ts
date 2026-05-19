@@ -12,6 +12,11 @@ type TimelineEvent = {
   channel: "SMS" | "EMAIL" | "CALL"
   direction: string
   status: string
+  inboxStatus?: string | null
+  inboxType?: string | null
+  priority?: string | null
+  summary?: string | null
+  recommendedAction?: string | null
   title: string
   body: string | null
   from: string | null
@@ -158,9 +163,14 @@ export async function GET(request: Request) {
         id: activity.id,
         channel: "EMAIL",
         direction: activity.type === "EMAIL_RECEIVED" ? "INBOUND" : "OUTBOUND",
-        status: "RECORDED",
+        status: typeof metadata.inboxStatus === "string" ? metadata.inboxStatus : "RECORDED",
+        inboxStatus: typeof metadata.inboxStatus === "string" ? metadata.inboxStatus : null,
+        inboxType: typeof metadata.inboxType === "string" ? metadata.inboxType : null,
+        priority: typeof metadata.priority === "string" ? metadata.priority : null,
+        summary: typeof metadata.summary === "string" ? metadata.summary : null,
+        recommendedAction: typeof metadata.recommendedAction === "string" ? metadata.recommendedAction : null,
         title: activity.title,
-        body: activity.description,
+        body: typeof metadata.snippet === "string" ? metadata.snippet : activity.description,
         from: typeof metadata.from === "string" ? metadata.from : null,
         to: typeof metadata.to === "string" ? metadata.to : null,
         createdAt: activity.createdAt,
@@ -172,10 +182,10 @@ export async function GET(request: Request) {
       .map((conversation) => {
         const events = conversation.events.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         const unreadCount = events.filter((event) =>
-          event.direction === "INBOUND" && (event.channel === "SMS" || event.channel === "EMAIL")
+          event.direction === "INBOUND" && (event.channel === "SMS" || (event.channel === "EMAIL" && event.inboxStatus !== "ARCHIVED" && event.inboxStatus !== "DONE"))
         ).length
         const attentionCount = events.filter((event) =>
-          ["FAILED", "UNDELIVERED", "MISSED", "NO_ANSWER"].includes(event.status)
+          ["FAILED", "UNDELIVERED", "MISSED", "NO_ANSWER"].includes(event.status) || event.priority === "HIGH" || event.inboxType === "URGENT"
         ).length
         return {
           ...conversation,

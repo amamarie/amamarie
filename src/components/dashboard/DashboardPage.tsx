@@ -276,7 +276,7 @@ export function DashboardPage() {
       const result = (await postAction<GmailSyncResult>("/api/integrations/google/gmail/sync", { maxResults: 15 })) ?? {}
       setNotice({
         type: "success",
-        message: `Gmail synchronisé: ${result.imported ?? 0} nouveau(x) prospect(s), ${result.skipped ?? 0} ignoré(s), ${result.checked ?? 0} message(s) vérifié(s).`,
+        message: `Gmail synchronisé: ${result.imported ?? 0} courriel(s) ajouté(s) à l’inbox, ${result.skipped ?? 0} ignoré(s), ${result.checked ?? 0} message(s) vérifié(s).`,
       })
       await load()
     } catch (actionError) {

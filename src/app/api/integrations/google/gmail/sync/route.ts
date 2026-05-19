@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { fail, handleApiError, ok } from "@/lib/api-response"
-import { syncIncomingGmailLeads } from "@/lib/services/gmail-inbound-sync"
+import { syncIncomingGmailMessages } from "@/lib/services/gmail-inbound-sync"
 import { getTenantContext } from "@/lib/tenant"
 
 const syncSchema = z.object({
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   try {
     const { organizationId, userId } = await getTenantContext()
     const payload = syncSchema.parse(await request.json().catch(() => ({})))
-    const result = await syncIncomingGmailLeads({ organizationId, userId, ...payload })
+    const result = await syncIncomingGmailMessages({ organizationId, userId, ...payload })
     return ok(result)
   } catch (error) {
     if (error instanceof Error) {

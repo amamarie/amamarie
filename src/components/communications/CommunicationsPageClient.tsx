@@ -1,6 +1,6 @@
 "use client"
 
-import { Inbox, Mail, MessageSquare, PhoneCall, RefreshCw, Search, Send, Settings, Trash2 } from "lucide-react"
+import { AlertTriangle, Archive, CheckCircle2, FileText, Inbox, Mail, MessageSquare, PhoneCall, RefreshCw, Search, Send, Settings, Sparkles, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 
@@ -12,6 +12,11 @@ type ConversationEvent = {
   channel: "SMS" | "EMAIL" | "CALL"
   direction: string
   status: string
+  inboxStatus?: string | null
+  inboxType?: string | null
+  priority?: string | null
+  summary?: string | null
+  recommendedAction?: string | null
   title: string
   body: string | null
   from: string | null
@@ -19,6 +24,8 @@ type ConversationEvent = {
   createdAt: string
   href: string
 }
+
+type InboxFilter = "to-process" | "urgent" | "unassigned" | "documents" | "planned" | "archived" | "all"
 
 type Conversation = {
   key: string
@@ -51,8 +58,8 @@ async function readJson<T>(response: Response) {
 
 function statusTone(status: string) {
   if (["FAILED", "UNDELIVERED", "MISSED", "NO_ANSWER"].includes(status)) return "rose"
-  if (["DELIVERED", "SENT", "COMPLETED", "RECEIVED"].includes(status)) return "emerald"
-  if (["QUEUED", "RINGING", "IN_PROGRESS"].includes(status)) return "sky"
+  if (["DELIVERED", "SENT", "COMPLETED", "RECEIVED", "DONE", "ARCHIVED", "ANSWERED", "CLASSIFIED"].includes(status)) return "emerald"
+  if (["QUEUED", "RINGING", "IN_PROGRESS", "TO_PROCESS", "PLANNED", "WAITING"].includes(status)) return "sky"
   return "slate"
 }
 
@@ -66,6 +73,9 @@ export function CommunicationsPageClient() {
   const [isSendingReply, setIsSendingReply] = useState(false)
   const [selectedCorrespondentKeys, setSelectedCorrespondentKeys] = useState<Set<string>>(() => new Set())
   const [isDeletingConversations, setIsDeletingConversations] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<InboxFilter>("to-process")
+  const [isSyncingGmail, setIsSyncingGmail] = useState(false)
+  const [updatingEmailId, setUpdatingEmailId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -95,16 +105,36 @@ export function CommunicationsPageClient() {
 
   const filteredConversations = useMemo(() => {
     const query = conversationSearch.trim().toLowerCase()
-    if (!query) return conversations
-    return conversations.filter((conversation) =>
+    return conversations.filter((conversation) => {
+      const events = conversation.events
+      const matchesFilter =
+        activeFilter === "all"
+          ? true
+          : activeFilter === "to-process"
+            ? events.some((event) => event.channel === "EMAIL" && event.inboxStatus !== "DONE" && event.inboxStatus !== "ARCHIVED")
+            : activeFilter === "urgent"
+              ? events.some((event) => event.priority === "HIGH" || event.inboxType === "URGENT")
+              : activeFilter === "unassigned"
+                ? conversation.type === "UNASSIGNED"
+                : activeFilter === "documents"
+                  ? events.some((event) => event.inboxType === "DOCUMENT")
+                  : activeFilter === "planned"
+                    ? events.some((event) => event.inboxStatus === "PLANNED" || event.inboxStatus === "WAITING")
+                    : events.some((event) => event.inboxStatus === "ARCHIVED" || event.inboxStatus === "DONE")
+
+      if (!matchesFilter) return false
+      if (!query) return true
+      return (
       [
         conversation.name,
         conversation.phone ?? "",
         conversation.email ?? "",
         conversation.latestPreview ?? "",
+        ...conversation.events.flatMap((event) => [event.title, event.summary ?? "", event.recommendedAction ?? ""]),
       ].some((value) => value.toLowerCase().includes(query))
-    )
-  }, [conversationSearch, conversations])
+      )
+    })
+  }, [activeFilter, conversationSearch, conversations])
 
   const selectedConversation = useMemo(
     () => filteredConversations.find((conversation) => conversation.key === selectedConversationKey) ?? filteredConversations[0] ?? null,
@@ -121,18 +151,15 @@ export function CommunicationsPageClient() {
     [conversations]
   )
 
-  const channelCounts = useMemo(() => {
-    return conversations.reduce(
-      (totals, conversation) => {
-        for (const event of conversation.events) {
-          if (event.channel === "SMS") totals.sms += 1
-          if (event.channel === "EMAIL") totals.email += 1
-          if (event.channel === "CALL") totals.calls += 1
-        }
-        return totals
-      },
-      { sms: 0, email: 0, calls: 0 }
-    )
+  const inboxStats = useMemo(() => {
+    const emailEvents = conversations.flatMap((conversation) => conversation.events.map((event) => ({ event, conversation }))).filter(({ event }) => event.channel === "EMAIL")
+    return {
+      toProcess: emailEvents.filter(({ event }) => event.inboxStatus !== "DONE" && event.inboxStatus !== "ARCHIVED").length,
+      urgent: emailEvents.filter(({ event }) => event.priority === "HIGH" || event.inboxType === "URGENT").length,
+      unassigned: conversations.filter((conversation) => conversation.type === "UNASSIGNED").length,
+      documents: emailEvents.filter(({ event }) => event.inboxType === "DOCUMENT").length,
+      archived: emailEvents.filter(({ event }) => event.inboxStatus === "DONE" || event.inboxStatus === "ARCHIVED").length,
+    }
   }, [conversations])
 
   const selectedCorrespondents = useMemo(
@@ -197,6 +224,44 @@ export function CommunicationsPageClient() {
     }
   }
 
+  async function syncGmail() {
+    setIsSyncingGmail(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await readJson<{ checked?: number; imported?: number; skipped?: number }>(await fetch("/api/integrations/google/gmail/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxResults: 25 }),
+      }))
+      setNotice(`${result.imported ?? 0} courriel(s) ajouté(s) à la boîte de traitement. ${result.skipped ?? 0} ignoré(s).`)
+      await load()
+    } catch (syncError) {
+      setError(syncError instanceof Error ? syncError.message : "Impossible de synchroniser Gmail.")
+    } finally {
+      setIsSyncingGmail(false)
+    }
+  }
+
+  async function updateEmailStatus(eventId: string, status: "DONE" | "ARCHIVED" | "PLANNED" | "WAITING") {
+    setUpdatingEmailId(eventId)
+    setError(null)
+    setNotice(null)
+    try {
+      await readJson(await fetch(`/api/communications/email-activities/${eventId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }))
+      setNotice(status === "ARCHIVED" || status === "DONE" ? "Courriel retiré de la boîte à traiter." : "Courriel reporté.")
+      await load()
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : "Impossible de mettre à jour le courriel.")
+    } finally {
+      setUpdatingEmailId(null)
+    }
+  }
+
   async function sendReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selectedConversation) return
@@ -234,8 +299,8 @@ export function CommunicationsPageClient() {
   return (
     <PageShell
       eyebrow="Communications"
-      title="Boîte de réception"
-      description="Conversations SMS, courriel et appels regroupées par client ou prospect."
+      title="Inbox intelligente"
+      description="Boîte de traitement CRM pour transformer les courriels en tâches, documents, rendez-vous ou opportunités."
       showIntro={false}
     >
       {notice ? <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{notice}</div> : null}
@@ -243,21 +308,23 @@ export function CommunicationsPageClient() {
 
       <section className="isolate min-w-0 overflow-hidden rounded-[2rem] border-2 border-emerald-200 bg-white shadow-[0_12px_0_#d9f99d]">
         <div className="border-b-2 border-emerald-100 bg-white p-5">
-          <CommunicationHero
-            conversationsCount={conversations.length}
-            inboundCount={inboundCount}
-            attentionCount={attentionCount}
-            selectedCount={selectedCorrespondents.length}
-            selectedMessageCount={selectedCorrespondentMessageCount}
-            onRefresh={() => void load()}
-          />
+            <CommunicationHero
+              conversationsCount={conversations.length}
+              inboundCount={inboundCount}
+              attentionCount={attentionCount}
+              selectedCount={selectedCorrespondents.length}
+              selectedMessageCount={selectedCorrespondentMessageCount}
+              onRefresh={() => void load()}
+              onSyncGmail={() => void syncGmail()}
+              isSyncingGmail={isSyncingGmail}
+            />
 
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <CommunicationMetricCard icon={Inbox} label="Conversations" value={conversations.length} detail="Dossiers et prospects" tone="bg-emerald-50 text-emerald-800 border-emerald-200 shadow-[0_6px_0_#bbf7d0]" />
-            <CommunicationMetricCard icon={MessageSquare} label="SMS" value={channelCounts.sms} detail="Entrants et sortants" tone="bg-sky-50 text-sky-800 border-sky-200 shadow-[0_6px_0_#bae6fd]" />
-            <CommunicationMetricCard icon={Mail} label="Courriels" value={channelCounts.email} detail="Activités courriel" tone="bg-violet-50 text-violet-800 border-violet-200 shadow-[0_6px_0_#ddd6fe]" />
-            <CommunicationMetricCard icon={PhoneCall} label="Appels" value={channelCounts.calls} detail="Historique d'appels" tone="bg-cyan-50 text-cyan-800 border-cyan-200 shadow-[0_6px_0_#a5f3fc]" />
-            <CommunicationMetricCard icon={Trash2} label="Sélection" value={selectedCorrespondents.length} detail={`${selectedCorrespondentMessageCount} communication(s)`} tone="bg-rose-50 text-rose-800 border-rose-200 shadow-[0_6px_0_#fecdd3]" />
+            <CommunicationMetricCard icon={Inbox} label="À traiter" value={inboxStats.toProcess} detail="Courriels actifs" tone="bg-emerald-50 text-emerald-800 border-emerald-200 shadow-[0_6px_0_#bbf7d0]" />
+            <CommunicationMetricCard icon={AlertTriangle} label="Urgents" value={inboxStats.urgent} detail="Réclamation, résiliation, urgence" tone="bg-rose-50 text-rose-800 border-rose-200 shadow-[0_6px_0_#fecdd3]" />
+            <CommunicationMetricCard icon={FileText} label="Documents" value={inboxStats.documents} detail="Pièces à classer" tone="bg-amber-50 text-amber-800 border-amber-200 shadow-[0_6px_0_#fde68a]" />
+            <CommunicationMetricCard icon={Sparkles} label="Non assignés" value={inboxStats.unassigned} detail="À lier au CRM" tone="bg-violet-50 text-violet-800 border-violet-200 shadow-[0_6px_0_#ddd6fe]" />
+            <CommunicationMetricCard icon={CheckCircle2} label="Traités" value={inboxStats.archived} detail="Retirés de la boîte" tone="bg-slate-50 text-slate-800 border-slate-200 shadow-[0_6px_0_#e2e8f0]" />
           </div>
         </div>
 
@@ -267,13 +334,17 @@ export function CommunicationsPageClient() {
               <p className="text-xs font-black uppercase tracking-wide text-slate-400">Emplacement actuel</p>
               <h2 className="mt-1 text-2xl font-black text-slate-950">Boîte de réception par correspondant</h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Sélectionnez un correspondant à gauche pour consulter tous les messages entrants et sortants au même endroit.
+                Traitez chaque courriel, liez-le au CRM, créez une action si nécessaire, puis archivez-le.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={() => void load()} className="rounded-full border-2 bg-white font-black">
                 <RefreshCw className="size-4" />
                 Rafraîchir
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void syncGmail()} disabled={isSyncingGmail} className="rounded-full border-2 bg-white font-black">
+                {isSyncingGmail ? <RefreshCw className="size-4 animate-spin" /> : <Mail className="size-4" />}
+                Synchroniser Gmail
               </Button>
               <Button type="button" asChild className="rounded-full bg-slate-950 px-5 font-black text-white shadow-[0_6px_0_#020617] hover:bg-slate-800">
                 <Link href="/settings/communications">
@@ -296,6 +367,28 @@ export function CommunicationsPageClient() {
                   className="h-12 w-full rounded-full border-2 border-slate-200 bg-white pl-11 pr-4 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                 />
               </label>
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                {[
+                  { label: "À traiter", value: "to-process" as const, count: inboxStats.toProcess },
+                  { label: "Urgents", value: "urgent" as const, count: inboxStats.urgent },
+                  { label: "Non assignés", value: "unassigned" as const, count: inboxStats.unassigned },
+                  { label: "Documents", value: "documents" as const, count: inboxStats.documents },
+                  { label: "Reportés", value: "planned" as const, count: 0 },
+                  { label: "Archivés", value: "archived" as const, count: inboxStats.archived },
+                  { label: "Tous", value: "all" as const, count: conversations.length },
+                ].map((filter) => (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setActiveFilter(filter.value)}
+                    className={activeFilter === filter.value
+                      ? "shrink-0 rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white"
+                      : "shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50"}
+                  >
+                    {filter.label}{filter.count ? ` · ${filter.count}` : ""}
+                  </button>
+                ))}
+              </div>
               <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -350,7 +443,7 @@ export function CommunicationsPageClient() {
           </aside>
 
           <main className="flex min-w-0 flex-col bg-white">
-            <ConversationThread conversation={selectedConversation} />
+            <ConversationThread conversation={selectedConversation} updatingEmailId={updatingEmailId} onUpdateEmailStatus={updateEmailStatus} />
             {selectedConversation ? <ReplyComposer conversation={selectedConversation} isSendingReply={isSendingReply} onSubmit={sendReply} /> : null}
           </main>
           </div>
@@ -378,6 +471,8 @@ function CommunicationHero({
   selectedCount,
   selectedMessageCount,
   onRefresh,
+  onSyncGmail,
+  isSyncingGmail,
 }: {
   conversationsCount: number
   inboundCount: number
@@ -385,16 +480,18 @@ function CommunicationHero({
   selectedCount: number
   selectedMessageCount: number
   onRefresh: () => void
+  onSyncGmail: () => void
+  isSyncingGmail: boolean
 }) {
-  const stages = ["SMS", "Courriels", "Appels", "Dossiers", "Réponses", "Historique"]
+  const stages = ["À traiter", "Urgents", "Documents", "Non assignés", "Répondre", "Archiver"]
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_280px] xl:items-stretch">
       <div className="rounded-[1.75rem] border-2 border-emerald-200 bg-emerald-500 p-5 text-white shadow-[0_8px_0_#16a34a]">
-        <p className="text-xs font-black uppercase tracking-wide text-emerald-50">SPACE COMMUNICATIONS</p>
-        <h2 className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Toutes les conversations reliées aux dossiers</h2>
+        <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Inbox zéro CRM</p>
+        <h2 className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Chaque courriel devient une action claire</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
-          Regroupez SMS, courriels et appels par client ou prospect pour répondre vite, garder le contexte et nettoyer les communications inutiles.
+          Ne remplacez pas Gmail ou Outlook : utilisez-les comme source, puis traitez, classez, reliez au CRM et archivez dans FinAssuro.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {stages.map((stage) => (
@@ -407,6 +504,10 @@ function CommunicationHero({
           <Button variant="outline" className="rounded-full border-2 border-white bg-white font-black text-emerald-700 hover:bg-emerald-50" onClick={onRefresh}>
             <RefreshCw className="size-4" />
             Rafraîchir
+          </Button>
+          <Button variant="outline" className="rounded-full border-2 border-white bg-white font-black text-emerald-700 hover:bg-emerald-50" onClick={onSyncGmail} disabled={isSyncingGmail}>
+            {isSyncingGmail ? <RefreshCw className="size-4 animate-spin" /> : <Mail className="size-4" />}
+            Synchroniser Gmail
           </Button>
           <Button className="rounded-full bg-slate-950 px-5 font-black text-white shadow-[0_6px_0_#020617] hover:bg-slate-800" asChild>
             <Link href="/settings/communications">
@@ -424,7 +525,7 @@ function CommunicationHero({
           <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(conversationsCount * 8, 100)}%` }} />
         </div>
         <p className="mt-3 text-sm font-bold leading-6 text-slate-600">
-          {inboundCount} message(s) entrant(s) · {attentionCount} élément(s) à vérifier.
+          {inboundCount} message(s) à traiter · {attentionCount} élément(s) urgent(s) ou à vérifier.
         </p>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-2xl bg-white px-2 py-2">
@@ -516,11 +617,17 @@ function ConversationButton({
           </div>
           <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{conversation.phone ?? conversation.email ?? "Coordonnée à compléter"}</p>
           <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{conversation.latestPreview || latest?.title || "Aucun aperçu disponible"}</p>
+          {latest?.channel === "EMAIL" && latest.summary ? (
+            <p className="mt-2 line-clamp-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold leading-5 text-slate-700">
+              {latest.summary}
+            </p>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge tone={conversation.type === "CLIENT" ? "emerald" : conversation.type === "LEAD" ? "sky" : "slate"}>
               {conversation.type === "CLIENT" ? "Client" : conversation.type === "LEAD" ? "Prospect" : "Non associé"}
             </StatusBadge>
             {conversation.unreadCount > 0 ? <StatusBadge tone="amber">{conversation.unreadCount} entrant(s)</StatusBadge> : null}
+            {latest?.inboxType ? <StatusBadge tone={latest.inboxType === "URGENT" ? "rose" : latest.inboxType === "DOCUMENT" ? "amber" : "sky"}>{latest.inboxType}</StatusBadge> : null}
           </div>
         </div>
       </div>
@@ -529,7 +636,15 @@ function ConversationButton({
   )
 }
 
-function ConversationThread({ conversation }: { conversation: Conversation | null }) {
+function ConversationThread({
+  conversation,
+  updatingEmailId,
+  onUpdateEmailStatus,
+}: {
+  conversation: Conversation | null
+  updatingEmailId: string | null
+  onUpdateEmailStatus: (eventId: string, status: "DONE" | "ARCHIVED" | "PLANNED" | "WAITING") => Promise<void>
+}) {
   if (!conversation) {
     return (
       <div className="p-4">
@@ -592,6 +707,33 @@ function ConversationThread({ conversation }: { conversation: Conversation | nul
                 ) : (
                   <p className="mt-3 text-sm font-semibold leading-6 text-slate-500">Aucun contenu texte disponible pour cette communication.</p>
                 )}
+
+                {event.channel === "EMAIL" ? (
+                  <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="mt-0.5 size-4 shrink-0 text-emerald-700" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-800">Résumé et action recommandée</p>
+                        <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">{event.summary ?? event.body ?? event.title}</p>
+                        {event.recommendedAction ? <p className="mt-1 text-xs font-bold leading-5 text-emerald-800">{event.recommendedAction}</p> : null}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "DONE")}>
+                        <CheckCircle2 className="size-3.5" />
+                        Traité
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "PLANNED")}>
+                        <RefreshCw className="size-3.5" />
+                        Reporter
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" disabled={updatingEmailId === event.id} className="rounded-full bg-white font-black" onClick={() => void onUpdateEmailStatus(event.id, "ARCHIVED")}>
+                        <Archive className="size-3.5" />
+                        Archiver
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
                   {event.from ? <span>De: {event.from}</span> : null}

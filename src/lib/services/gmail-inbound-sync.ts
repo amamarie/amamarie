@@ -1,7 +1,6 @@
 import { createCrmActivity } from "@/lib/crm-events"
 import { getAdvisorGoogleWorkspaceAccessToken } from "@/lib/google/gmail"
 import { prisma } from "@/lib/prisma"
-import { createOrQualifyLeadFromSource } from "@/lib/services/lead-intake-sources"
 
 type GmailListResponse = {
   messages?: { id: string; threadId?: string }[]
@@ -59,6 +58,80 @@ function messageDate(message: GmailMessageResponse) {
   return Number.isFinite(internal) ? new Date(internal) : null
 }
 
+function classifyEmail(subject: string, snippet?: string) {
+  const text = `${subject} ${snippet ?? ""}`.toLowerCase()
+
+  if (/(urgent|plainte|réclamation|reclamation|résiliation|resiliation|annuler|probl[eè]me|mise en demeure)/i.test(text)) {
+    return {
+      type: "URGENT",
+      priority: "HIGH",
+      summary: snippet || subject,
+      recommendedAction: "Traiter en priorité et créer une tâche de suivi si nécessaire.",
+    }
+  }
+
+  if (/(pi[eè]ce jointe|document|justificatif|relev[eé]|signature|sign[eé]|police|contrat|formulaire)/i.test(text)) {
+    return {
+      type: "DOCUMENT",
+      priority: "MEDIUM",
+      summary: snippet || subject,
+      recommendedAction: "Vérifier la pièce reçue et l’ajouter au dossier CRM.",
+    }
+  }
+
+  if (/(rendez-vous|rdv|disponible|disponibilit[eé]|cr[eé]neau|rencontre|appel|visio)/i.test(text)) {
+    return {
+      type: "RENDEZ_VOUS",
+      priority: "MEDIUM",
+      summary: snippet || subject,
+      recommendedAction: "Proposer un créneau et créer ou mettre à jour le rendez-vous.",
+    }
+  }
+
+  if (/(devis|soumission|proposition|tarif|prix|offre|bilan|information|infos)/i.test(text)) {
+    return {
+      type: "OPPORTUNITE",
+      priority: "MEDIUM",
+      summary: snippet || subject,
+      recommendedAction: "Qualifier le besoin et créer une tâche ou une opportunité si pertinent.",
+    }
+  }
+
+  return {
+    type: "QUESTION",
+    priority: "NORMAL",
+    summary: snippet || subject,
+    recommendedAction: "Lire le message, répondre si nécessaire, puis marquer comme traité.",
+  }
+}
+
+async function findRelatedContact(organizationId: string, email: string) {
+  const [client, lead] = await Promise.all([
+    prisma.client.findFirst({
+      where: {
+        organizationId,
+        status: { not: "ARCHIVED" },
+        OR: [
+          { email: { equals: email, mode: "insensitive" } },
+          { emailPrimary: { equals: email, mode: "insensitive" } },
+          { emailSecondary: { equals: email, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    }),
+    prisma.lead.findFirst({
+      where: {
+        organizationId,
+        status: { notIn: ["ARCHIVED", "LOST", "CONVERTED"] },
+        email: { equals: email, mode: "insensitive" },
+      },
+      select: { id: true },
+    }),
+  ])
+
+  return { clientId: client?.id ?? null, leadId: client ? null : lead?.id ?? null }
+}
+
 async function gmailFetch<T>(url: string, accessToken: string): Promise<T> {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -68,7 +141,7 @@ async function gmailFetch<T>(url: string, accessToken: string): Promise<T> {
   return data
 }
 
-export async function syncIncomingGmailLeads({ organizationId, userId, maxResults = 15, query }: SyncIncomingGmailInput) {
+export async function syncIncomingGmailMessages({ organizationId, userId, maxResults = 15, query }: SyncIncomingGmailInput) {
   const google = await getAdvisorGoogleWorkspaceAccessToken({ organizationId, userId })
   if (!google) throw new Error("GMAIL_NOT_CONNECTED")
   if (!google.scope.split(/\s+/).includes("https://www.googleapis.com/auth/gmail.readonly")) {
@@ -111,36 +184,18 @@ export async function syncIncomingGmailLeads({ organizationId, userId, maxResult
       continue
     }
 
-    const name = splitName(from.name, from.email)
     const subject = header(message, "Subject") || "Courriel entrant"
-    const text = [`Sujet: ${subject}`, message.snippet ? `Aperçu: ${message.snippet}` : null].filter(Boolean).join("\n")
-
-    const imported = await createOrQualifyLeadFromSource({
-      organizationId,
-      advisorId: userId,
-      sourceKind: "EMAIL",
-      firstName: name.firstName,
-      lastName: name.lastName,
-      email: from.email,
-      message: text,
-      interestType: "courriel entrant",
-      externalId: message.id,
-      externalType: "GmailMessage",
-      metadata: {
-        gmailMessageId: message.id,
-        gmailThreadId: message.threadId,
-        subject,
-        from: header(message, "From"),
-        receivedAt: messageDate(message)?.toISOString() ?? null,
-      },
-    })
+    const classification = classifyEmail(subject, message.snippet)
+    const related = await findRelatedContact(organizationId, from.email)
+    const senderName = parseEmailAddress(header(message, "From")).name ?? splitName(from.name, from.email).firstName
 
     await createCrmActivity({
       organizationId,
       userId,
-      leadId: imported.lead.id,
+      clientId: related.clientId,
+      leadId: related.leadId,
       type: "EMAIL_RECEIVED",
-      title: "Courriel entrant importé",
+      title: subject,
       description: `${from.email}: ${subject}`,
       source: "IMPORT",
       entityType: "GmailMessage",
@@ -150,10 +205,20 @@ export async function syncIncomingGmailLeads({ organizationId, userId, maxResult
         gmailThreadId: message.threadId,
         subject,
         snippet: message.snippet,
+        summary: classification.summary,
+        recommendedAction: classification.recommendedAction,
+        inboxStatus: "TO_PROCESS",
+        inboxType: classification.type,
+        priority: classification.priority,
+        from: from.email,
+        fromName: senderName,
+        senderRaw: header(message, "From"),
+        receivedAt: messageDate(message)?.toISOString() ?? null,
+        linkedEntityType: related.clientId ? "CLIENT" : related.leadId ? "LEAD" : "UNASSIGNED",
       },
     })
 
-    results.push({ messageId: item.id, leadId: imported.lead.id, created: imported.created, skipped: false })
+    results.push({ messageId: item.id, clientId: related.clientId, leadId: related.leadId, type: classification.type, skipped: false })
   }
 
   await prisma.gmailIntegrationConnection.updateMany({
