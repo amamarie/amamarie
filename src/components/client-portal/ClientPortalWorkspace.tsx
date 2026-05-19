@@ -1243,7 +1243,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                 secondaryHref={activePageDetails.secondaryPage ? portalHref(activePageDetails.secondaryPage) : undefined}
               />
             ) : null}
-            <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" || activePage === "profil" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
+            <section className={!hasPrimaryWorkArea ? "hidden" : activePage === "overview" || activePage === "profil" || activePage === "consentements" ? "grid gap-5" : "grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"}>
           <div className={activePage === "overview" ? "hidden" : "space-y-5"}>
             <Panel id="portal-profile-questionnaire" className={`xl:col-span-2 ${showOnPage("profil")}`} title="Compléter mon profil client sécurisé" description="Ce formulaire remplit automatiquement votre dossier chez le conseiller. Vous pouvez sauvegarder un brouillon, puis soumettre quand les informations sont prêtes.">
               <div className={profileMissingItems.length > 0 ? "mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" : "mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"}>
@@ -1371,7 +1371,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
 
             <Panel id="portal-consents" className={showOnPage("consentements")} title="Consentements à valider" description="Confirmez uniquement les autorisations nécessaires. Chaque décision est horodatée dans votre dossier.">
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
-                <div className={consentReady ? "rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4" : "rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4"}>
+                <div className={consentReady ? "min-w-0 rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4" : "min-w-0 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4"}>
                   <div className="flex items-start gap-3">
                     <span className={consentReady ? "grid size-10 shrink-0 place-items-center rounded-xl bg-white text-emerald-700" : "grid size-10 shrink-0 place-items-center rounded-xl bg-white text-amber-700"}>
                       {consentReady ? <CheckCircle2 className="size-5" aria-hidden="true" /> : <ShieldCheck className="size-5" aria-hidden="true" />}
@@ -1416,12 +1416,12 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                 </div>
               </details>
 
-              <form onSubmit={confirmKyc} className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <form onSubmit={confirmKyc} className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
                 <div className="grid gap-2">
                   {consentDefinitions.map((consent) => {
                     const alreadyGiven = givenConsentTypes.has(consent.type)
                     return (
-                      <label key={consent.type} className={alreadyGiven ? "flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold leading-6 text-emerald-900" : "flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700"}>
+                      <label key={consent.type} className={alreadyGiven ? "flex min-w-0 gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold leading-6 text-emerald-900" : "flex min-w-0 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700"}>
                         <input
                           name={consent.field}
                           type="checkbox"
@@ -1429,7 +1429,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                           required={isPreview ? false : consent.required}
                           defaultChecked={alreadyGiven}
                         />
-                        <span>
+                        <span className="min-w-0">
                           <span className="block font-black">{consent.title}</span>
                           <span className="block text-xs font-semibold leading-5 opacity-80">{consent.detail}</span>
                           {alreadyGiven ? <span className="mt-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[0.7rem] font-black text-emerald-700">Déjà accepté</span> : null}
@@ -1449,9 +1449,9 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                       placeholder="Précision pour le conseiller."
                     />
                   </label>
-                  <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700">
+                  <label className="flex min-w-0 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-6 text-slate-700">
                     <input name="accepted" type="checkbox" className="mt-1 size-4 accent-emerald-600" required={isPreview ? false : true} />
-                    <span>Je confirme que les renseignements de mon dossier sont exacts et complets à ma connaissance.</span>
+                    <span className="min-w-0">Je confirme que les renseignements de mon dossier sont exacts et complets à ma connaissance.</span>
                   </label>
                   <label className="grid gap-1.5 text-sm font-black text-slate-700">
                     Signature électronique
@@ -1774,21 +1774,21 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
               {client.consents.map((consent) => (
                 <div
                   key={consent.id}
-                  className="rounded-[1.15rem] border border-slate-100 bg-slate-50 p-3"
+                  className="min-w-0 rounded-[1.15rem] border border-slate-100 bg-slate-50 p-3"
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start">
                     <CheckSquare className={consent.status === "GIVEN" ? "mt-0.5 size-4 shrink-0 text-emerald-600" : "mt-0.5 size-4 shrink-0 text-slate-400"} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="min-w-0 text-sm font-black text-slate-950">{consent.purpose?.name ?? consentLabels[consent.type] ?? consent.type}</p>
+                        <p className="min-w-0 break-words text-sm font-black text-slate-950">{consent.purpose?.name ?? consentLabels[consent.type] ?? consent.type}</p>
                         <span className={consent.status === "GIVEN" ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] font-black uppercase text-emerald-700" : "rounded-full bg-slate-200 px-2 py-0.5 text-[0.65rem] font-black uppercase text-slate-600"}>
                           {consentStatusLabels[consent.status] ?? statusLabel(consent.status)}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                      <p className="mt-1 break-words text-xs font-semibold leading-5 text-slate-500">
                         {consent.purpose?.description ?? consent.template?.title ?? "Préférence liée au dossier client."}
                       </p>
-                      <p className="mt-1 text-[0.7rem] font-bold text-slate-400">
+                      <p className="mt-1 break-words text-[0.7rem] font-bold text-slate-400">
                         {consent.status === "GIVEN" ? `Accepté le ${formatDate(consent.givenAt)}` : consent.revokedAt ? `Retiré le ${formatDate(consent.revokedAt)}` : statusLabel(consent.status)}
                         {consent.template ? ` · Texte ${consent.template.version} ${consent.template.language}` : ""}
                         {consent.expiresAt ? ` · Expire le ${formatDate(consent.expiresAt)}` : ""}
@@ -1799,7 +1799,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="rounded-full bg-white text-xs font-black"
+                        className="w-full shrink-0 rounded-full bg-white text-xs font-black sm:w-auto"
                         disabled={Boolean(acceptingConsentId)}
                         onClick={() => void acceptConsent(consent.id)}
                       >
@@ -1812,7 +1812,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="rounded-full bg-white text-xs font-black"
+                        className="w-full shrink-0 rounded-full bg-white text-xs font-black sm:w-auto"
                         disabled={Boolean(withdrawingConsentId)}
                         onClick={() => void withdrawConsent(consent.id)}
                       >
@@ -2175,7 +2175,7 @@ function QuestionnaireTextArea({
 
 function Panel({ id, title, description, className, children }: { id?: string; title: string; description: string; className?: string; children: ReactNode }) {
   return (
-    <section id={id} className={`scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm ${className ?? ""}`}>
+    <section id={id} className={`min-w-0 scroll-mt-24 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5 ${className ?? ""}`}>
       <h2 className="text-lg font-black tracking-tight text-slate-950">{title}</h2>
       <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
       <div className="mt-4">{children}</div>
