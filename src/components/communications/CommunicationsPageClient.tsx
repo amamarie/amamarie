@@ -26,6 +26,7 @@ type ConversationEvent = {
 }
 
 type InboxFilter = "to-process" | "urgent" | "unassigned" | "documents" | "planned" | "archived" | "all"
+type CommunicationView = "emails" | "messages"
 
 type Conversation = {
   key: string
@@ -73,6 +74,7 @@ export function CommunicationsPageClient() {
   const [isSendingReply, setIsSendingReply] = useState(false)
   const [selectedCorrespondentKeys, setSelectedCorrespondentKeys] = useState<Set<string>>(() => new Set())
   const [isDeletingConversations, setIsDeletingConversations] = useState(false)
+  const [activeView, setActiveView] = useState<CommunicationView>("emails")
   const [activeFilter, setActiveFilter] = useState<InboxFilter>("to-process")
   const [isSyncingGmail, setIsSyncingGmail] = useState(false)
   const [updatingEmailId, setUpdatingEmailId] = useState<string | null>(null)
@@ -107,10 +109,30 @@ export function CommunicationsPageClient() {
 
   const filteredConversations = useMemo(() => {
     const query = conversationSearch.trim().toLowerCase()
-    return conversations.filter((conversation) => {
+    return conversations
+      .map((conversation) => {
+        const events = conversation.events.filter((event) => activeView === "emails" ? event.channel === "EMAIL" : event.channel !== "EMAIL")
+        const latest = events[0]
+        return {
+          ...conversation,
+          events,
+          latestAt: latest?.createdAt ?? null,
+          latestPreview: latest?.body || latest?.summary || latest?.title || "",
+          unreadCount: events.filter((event) =>
+            event.direction === "INBOUND" && (activeView === "messages" || (event.inboxStatus !== "ARCHIVED" && event.inboxStatus !== "DONE"))
+          ).length,
+          attentionCount: events.filter((event) =>
+            ["FAILED", "UNDELIVERED", "MISSED", "NO_ANSWER"].includes(event.status) || event.priority === "HIGH" || event.inboxType === "URGENT"
+          ).length,
+        }
+      })
+      .filter((conversation) => {
       const events = conversation.events
+      if (events.length === 0) return false
       const matchesFilter =
-        activeFilter === "all"
+        activeView === "messages"
+          ? true
+          : activeFilter === "all"
           ? true
           : activeFilter === "to-process"
             ? events.some((event) => event.channel === "EMAIL" && event.inboxStatus !== "DONE" && event.inboxStatus !== "ARCHIVED")
@@ -136,7 +158,7 @@ export function CommunicationsPageClient() {
       ].some((value) => value.toLowerCase().includes(query))
       )
     })
-  }, [activeFilter, conversationSearch, conversations])
+  }, [activeFilter, activeView, conversationSearch, conversations])
 
   const selectedConversation = useMemo(
     () => filteredConversations.find((conversation) => conversation.key === selectedConversationKey) ?? filteredConversations[0] ?? null,
@@ -155,12 +177,16 @@ export function CommunicationsPageClient() {
 
   const inboxStats = useMemo(() => {
     const emailEvents = conversations.flatMap((conversation) => conversation.events.map((event) => ({ event, conversation }))).filter(({ event }) => event.channel === "EMAIL")
+    const messageEvents = conversations.flatMap((conversation) => conversation.events).filter((event) => event.channel !== "EMAIL")
     return {
       toProcess: emailEvents.filter(({ event }) => event.inboxStatus !== "DONE" && event.inboxStatus !== "ARCHIVED").length,
       urgent: emailEvents.filter(({ event }) => event.priority === "HIGH" || event.inboxType === "URGENT").length,
       unassigned: conversations.filter((conversation) => conversation.type === "UNASSIGNED").length,
       documents: emailEvents.filter(({ event }) => event.inboxType === "DOCUMENT").length,
       archived: emailEvents.filter(({ event }) => event.inboxStatus === "DONE" || event.inboxStatus === "ARCHIVED").length,
+      emails: emailEvents.length,
+      messages: messageEvents.length,
+      inboundMessages: messageEvents.filter((event) => event.direction === "INBOUND").length,
     }
   }, [conversations])
 
@@ -412,9 +438,11 @@ export function CommunicationsPageClient() {
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-slate-400">Emplacement actuel</p>
-              <h2 className="mt-1 text-2xl font-black text-slate-950">Boîte de réception par correspondant</h2>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">{activeView === "emails" ? "Courriels Gmail à traiter" : "Messages envoyés et reçus dans FinAssuro"}</h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Traitez chaque courriel, liez-le au CRM, créez une action si nécessaire, puis archivez-le.
+                {activeView === "emails"
+                  ? "Les courriels arrivés automatiquement sont traités ici, sans les mélanger aux SMS et appels."
+                  : "Les SMS, réponses et appels gérés depuis FinAssuro restent dans un espace séparé."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -435,7 +463,36 @@ export function CommunicationsPageClient() {
             </div>
           </div>
 
-          <div className="grid min-h-[680px] min-w-0 overflow-hidden rounded-[1.75rem] border-2 border-slate-200 bg-white shadow-[0_8px_0_#f1f5f9] md:grid-cols-[minmax(340px,390px)_minmax(0,1fr)] lg:h-[calc(100svh-330px)] lg:min-h-[640px] xl:grid-cols-[minmax(380px,420px)_minmax(0,1fr)]">
+          <div className="mb-4 grid gap-2 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setActiveView("emails")}
+              className={activeView === "emails"
+                ? "rounded-[1.25rem] border-2 border-emerald-300 bg-emerald-50 p-4 text-left shadow-[0_5px_0_#bbf7d0]"
+                : "rounded-[1.25rem] border-2 border-slate-200 bg-white p-4 text-left hover:bg-slate-50"}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-950">Courriels Gmail</p>
+                <Mail className="size-5 text-emerald-700" />
+              </div>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{inboxStats.emails} courriel(s), {inboxStats.toProcess} à traiter</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("messages")}
+              className={activeView === "messages"
+                ? "rounded-[1.25rem] border-2 border-sky-300 bg-sky-50 p-4 text-left shadow-[0_5px_0_#bae6fd]"
+                : "rounded-[1.25rem] border-2 border-slate-200 bg-white p-4 text-left hover:bg-slate-50"}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-950">Messages FinAssuro</p>
+                <MessageSquare className="size-5 text-sky-700" />
+              </div>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{inboxStats.messages} SMS/appel(s), {inboxStats.inboundMessages} entrant(s)</p>
+            </button>
+          </div>
+
+          <div className="grid min-h-[680px] min-w-0 overflow-visible rounded-[1.75rem] border-2 border-slate-200 bg-white shadow-[0_8px_0_#f1f5f9] md:grid-cols-[minmax(340px,390px)_minmax(0,1fr)] xl:grid-cols-[minmax(380px,420px)_minmax(0,1fr)]">
           <aside className="flex w-full min-w-0 flex-col border-b border-slate-100 bg-slate-50 lg:border-b-0 lg:border-r">
             <div className="shrink-0 border-b border-slate-100 bg-slate-50 p-3">
               <label className="relative block">
@@ -447,7 +504,7 @@ export function CommunicationsPageClient() {
                   className="h-12 w-full rounded-full border-2 border-slate-200 bg-white pl-11 pr-4 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-500"
                 />
               </label>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {activeView === "emails" ? <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 {[
                   { label: "À traiter", value: "to-process" as const, count: inboxStats.toProcess },
                   { label: "Urgents", value: "urgent" as const, count: inboxStats.urgent },
@@ -468,7 +525,11 @@ export function CommunicationsPageClient() {
                     {filter.label}{filter.count ? ` · ${filter.count}` : ""}
                   </button>
                 ))}
-              </div>
+              </div> : (
+                <div className="mt-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-800">
+                  SMS, appels et réponses envoyés depuis FinAssuro. Les courriels Gmail sont dans l’onglet séparé.
+                </div>
+              )}
               <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -502,9 +563,9 @@ export function CommunicationsPageClient() {
                 </div>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="p-4">
               {isLoading ? <LoadingRows /> : null}
-              {!isLoading && filteredConversations.length === 0 ? <EmptyPanel title="Aucune conversation" description="Les messages liés aux dossiers apparaîtront ici." /> : null}
+              {!isLoading && filteredConversations.length === 0 ? <EmptyPanel title={activeView === "emails" ? "Aucun courriel" : "Aucun message FinAssuro"} description={activeView === "emails" ? "Les courriels Gmail synchronisés apparaîtront ici." : "Les SMS et appels gérés depuis FinAssuro apparaîtront ici."} /> : null}
               {!isLoading && filteredConversations.length > 0 ? (
                 <div className="grid min-w-0 gap-3 pb-2">
                   {filteredConversations.map((conversation) => (
@@ -525,6 +586,7 @@ export function CommunicationsPageClient() {
           <main className="flex min-w-0 flex-col bg-white">
             <ConversationThread
               conversation={selectedConversation}
+              activeView={activeView}
               updatingEmailId={updatingEmailId}
               creatingTaskEmailId={creatingTaskEmailId}
               creatingLeadEmailId={creatingLeadEmailId}
@@ -532,7 +594,7 @@ export function CommunicationsPageClient() {
               onCreateTaskFromEmail={createTaskFromEmail}
               onCreateLeadFromEmail={createLeadFromEmail}
             />
-            {selectedConversation ? <ReplyComposer conversation={selectedConversation} isSendingReply={isSendingReply} onSubmit={sendReply} /> : null}
+            {selectedConversation && activeView === "messages" ? <ReplyComposer conversation={selectedConversation} isSendingReply={isSendingReply} onSubmit={sendReply} /> : null}
           </main>
           </div>
         </div>
@@ -726,6 +788,7 @@ function ConversationButton({
 
 function ConversationThread({
   conversation,
+  activeView,
   updatingEmailId,
   creatingTaskEmailId,
   creatingLeadEmailId,
@@ -734,6 +797,7 @@ function ConversationThread({
   onCreateLeadFromEmail,
 }: {
   conversation: Conversation | null
+  activeView: CommunicationView
   updatingEmailId: string | null
   creatingTaskEmailId: string | null
   creatingLeadEmailId: string | null
@@ -756,7 +820,7 @@ function ConversationThread({
       <div className="border-b border-slate-100 bg-white p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Conversation dossier</p>
+            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">{activeView === "emails" ? "Courriels du dossier" : "Messages FinAssuro du dossier"}</p>
             <h3 className="mt-1 truncate text-2xl font-black text-slate-950">{conversation.name}</h3>
             <p className="mt-1 text-sm font-semibold text-slate-500">
               {conversation.phone ?? "Téléphone non défini"} {conversation.email ? `· ${conversation.email}` : ""}
@@ -768,7 +832,7 @@ function ConversationThread({
         </div>
       </div>
 
-      <div className="max-h-[560px] flex-1 overflow-y-auto bg-slate-50/60 p-4">
+      <div className="flex-1 bg-slate-50/60 p-4">
         <div className="grid gap-3">
           {events.map((event) => {
             const Icon = channelIcon(event.channel)
