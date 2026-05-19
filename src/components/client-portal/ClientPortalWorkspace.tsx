@@ -20,6 +20,7 @@ import {
   ExternalLink,
   HeartPulse,
   Loader2,
+  LogOut,
   Mail,
   MessageSquareText,
   PenLine,
@@ -618,6 +619,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
   const [creatingPrivacyRequestType, setCreatingPrivacyRequestType] = useState<string | null>(null)
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false)
   const [isSendingInvitation, setIsSendingInvitation] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -1113,22 +1115,56 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
     }
   }
 
+  async function signOutClientPortal() {
+    setIsSigningOut(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await fetch("/api/internal-auth/sign-out", { method: "POST" })
+      window.location.href = `/sign-in?role=client&redirect_url=${encodeURIComponent(portalHref(activePage))}`
+    } catch {
+      setIsSigningOut(false)
+      setError("Déconnexion impossible pour le moment. Réessayez dans quelques instants.")
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f9fc] text-slate-950">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
-            <span>
+            <span className="min-w-0">
               <span className="block text-sm font-semibold">Espace client</span>
-              <span className="block text-xs text-slate-500">{client.organization.name}</span>
+              <span className="block truncate text-xs text-slate-500">{client.organization.name}</span>
             </span>
           </div>
-          <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-            {isPreview ? "Aperçu conseiller" : "Dossier synchronisé"}
-          </span>
+          {isPreview ? (
+            <span className="w-fit rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-100">
+              Aperçu conseiller
+            </span>
+          ) : (
+            <div className="flex min-w-0 flex-wrap items-center gap-2 md:justify-end">
+              <div className="min-w-0 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                <span className="text-slate-400">Compte client</span>
+                <span className="mx-1.5 text-slate-300">•</span>
+                <span className="inline-block max-w-[12rem] truncate align-bottom">{userEmail ?? client.emailPrimary ?? client.email ?? greetingName}</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full bg-white px-3 text-xs font-black"
+                onClick={signOutClientPortal}
+                disabled={isSigningOut}
+              >
+                {isSigningOut ? <Loader2 className="size-3.5 animate-spin" /> : <LogOut className="size-3.5" />}
+                Se déconnecter
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
