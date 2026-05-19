@@ -46,6 +46,7 @@ export function InternalAuthCard({
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const [twoFactorChallengeId, setTwoFactorChallengeId] = useState<string | null>(null)
   const [twoFactorEmail, setTwoFactorEmail] = useState<string | null>(null)
+  const [twoFactorDeliveryChannel, setTwoFactorDeliveryChannel] = useState<"email" | "sms">("email")
   const [twoFactorCode, setTwoFactorCode] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("")
@@ -103,6 +104,7 @@ export function InternalAuthCard({
       requiresTwoFactor?: boolean
       challengeId?: string
       email?: string
+      deliveryChannel?: "email" | "sms"
     } | null
     setIsSubmitting(false)
 
@@ -114,7 +116,8 @@ export function InternalAuthCard({
     if (data.requiresTwoFactor && data.challengeId) {
       setTwoFactorChallengeId(data.challengeId)
       setTwoFactorEmail(data.email ?? null)
-      setResetMessage("Code de vérification envoyé par courriel.")
+      setTwoFactorDeliveryChannel(data.deliveryChannel === "sms" ? "sms" : "email")
+      setResetMessage(data.deliveryChannel === "sms" ? "Code de vérification envoyé par SMS." : "Code de vérification envoyé par courriel.")
       return
     }
 
@@ -132,7 +135,7 @@ export function InternalAuthCard({
     }
 
     if (twoFactorCode.replace(/\D/g, "").length !== 6) {
-      setError("Entrez le code à 6 chiffres reçu par courriel.")
+      setError("Entrez le code à 6 chiffres reçu.")
       return
     }
 
@@ -329,7 +332,7 @@ export function InternalAuthCard({
         </div>
 
         <p className="mt-4 text-sm leading-6 text-slate-600">
-          Un code à 6 chiffres a été envoyé à {twoFactorEmail ?? "votre courriel"}. Il expire dans 10 minutes.
+          Un code à 6 chiffres a été envoyé par {twoFactorDeliveryChannel === "sms" ? "SMS" : "courriel"} à {twoFactorEmail ?? (twoFactorDeliveryChannel === "sms" ? "votre téléphone" : "votre courriel")}. Il expire dans 10 minutes.
         </p>
 
         <label className="mt-5 grid gap-1.5 text-sm font-medium text-slate-800">

@@ -6,6 +6,8 @@ import type { User, UserRole } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { sendTransactionalEmail } from "@/lib/email/send"
 import { sendAdvisorGmailEmail } from "@/lib/google/gmail"
+import { sendAutomatedSms } from "@/lib/services/automated-sms"
+import { normalizePhoneNumber } from "@/lib/twilio/phone"
 import {
   normalizeSaasAppRole,
   organizationNameForAppRole,
@@ -118,6 +120,24 @@ function maskEmail(email: string) {
   return `${visible}${"*".repeat(Math.max(2, name.length - visible.length))}@${domain}`
 }
 
+function maskPhone(phone: string) {
+  const normalized = normalizePhoneNumber(phone)
+  if (!normalized) return "votre téléphone"
+  const lastDigits = normalized.slice(-4)
+  return `***-***-${lastDigits}`
+}
+
+function isAuthEmailDeliveryError(error: unknown) {
+  if (!(error instanceof Error)) return false
+  return (
+    error.message === "EMAIL_DOMAIN_NOT_VERIFIED" ||
+    error.message === "EMAIL_INVALID_FROM" ||
+    error.message === "EMAIL_NOT_CONFIGURED" ||
+    error.message === "EMAIL_INVALID_API_KEY" ||
+    error.message.startsWith("EMAIL_SEND_FAILED:")
+  )
+}
+
 async function sendInternalAuthEmail(user: Pick<User, "id" | "organizationId" | "email">, input: InternalAuthEmailInput) {
   const gmailResult = await sendAdvisorGmailEmail({
     organizationId: user.organizationId,
@@ -136,6 +156,46 @@ async function sendInternalAuthEmail(user: Pick<User, "id" | "organizationId" | 
     text: input.text,
     html: input.html,
   })
+}
+
+async function findClientForAuthDelivery(user: Pick<User, "email" | "organizationId">) {
+  return prisma.client.findFirst({
+    where: {
+      organizationId: user.organizationId,
+      status: { not: "ARCHIVED" },
+      OR: [
+        { email: { equals: user.email, mode: "insensitive" } },
+        { emailPrimary: { equals: user.email, mode: "insensitive" } },
+        { emailSecondary: { equals: user.email, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      advisorId: true,
+      phone: true,
+      phonePrimary: true,
+      phoneSecondary: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  })
+}
+
+async function sendClientTwoFactorSms(user: Pick<User, "email" | "organizationId">, code: string) {
+  const client = await findClientForAuthDelivery(user)
+  const phone = normalizePhoneNumber(client?.phonePrimary ?? client?.phone ?? client?.phoneSecondary)
+
+  if (!client || !phone) return null
+
+  await sendAutomatedSms({
+    organizationId: user.organizationId,
+    advisorId: client.advisorId,
+    clientId: client.id,
+    to: phone,
+    body: `Code de connexion FinAssuro: ${code}. Il expire dans 10 minutes. Ne le partagez avec personne.`,
+    requireAutoReplyEnabled: false,
+  })
+
+  return phone
 }
 
 function verifySessionValue(value: string): InternalSessionPayload | null {
@@ -402,27 +462,43 @@ export async function startInternalTwoFactorChallenge(user: User) {
     },
   })
 
-  await sendInternalAuthEmail(user, {
-    subject: "Code de connexion FinAssuro",
-    text: [
-      "Bonjour,",
-      "",
-      `Votre code de connexion FinAssuro est: ${code}`,
-      "",
-      "Ce code expire dans 10 minutes. Ne le partagez avec personne.",
-    ].join("\n"),
-    html: `
-      <p>Bonjour,</p>
-      <p>Votre code de connexion FinAssuro est :</p>
-      <p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p>
-      <p>Ce code expire dans 10 minutes. Ne le partagez avec personne.</p>
-    `,
-  })
+  let deliveryChannel: "email" | "sms" = "email"
+  let destination = maskEmail(user.email)
+
+  try {
+    await sendInternalAuthEmail(user, {
+      subject: "Code de connexion FinAssuro",
+      text: [
+        "Bonjour,",
+        "",
+        `Votre code de connexion FinAssuro est: ${code}`,
+        "",
+        "Ce code expire dans 10 minutes. Ne le partagez avec personne.",
+      ].join("\n"),
+      html: `
+        <p>Bonjour,</p>
+        <p>Votre code de connexion FinAssuro est :</p>
+        <p style="font-size:24px;font-weight:700;letter-spacing:4px">${code}</p>
+        <p>Ce code expire dans 10 minutes. Ne le partagez avec personne.</p>
+      `,
+    })
+  } catch (error) {
+    if (user.role !== "CLIENT" || !isAuthEmailDeliveryError(error)) throw error
+
+    const phone = await sendClientTwoFactorSms(user, code).catch(() => null)
+    if (!phone) {
+      throw new Error("CLIENT_AUTH_DELIVERY_UNAVAILABLE")
+    }
+
+    deliveryChannel = "sms"
+    destination = maskPhone(phone)
+  }
 
   return {
     challengeId,
     expiresAt,
-    email: maskEmail(user.email),
+    email: destination,
+    deliveryChannel,
   }
 }
 

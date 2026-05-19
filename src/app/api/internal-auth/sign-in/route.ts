@@ -14,6 +14,7 @@ function authEmailErrorMessage(message: string) {
   if (message === "EMAIL_DOMAIN_NOT_VERIFIED") return "Le domaine expéditeur n’est pas vérifié dans Resend. Vérifiez finassuro.com ou utilisez un expéditeur validé."
   if (message === "EMAIL_INVALID_FROM") return "L’expéditeur EMAIL_FROM est invalide. Utilisez un format comme FinAssuro <noreply@finassuro.com>."
   if (message === "EMAIL_NOT_CONFIGURED") return "Aucun fournisseur courriel n’est configuré. Ajoutez RESEND_API_KEY et EMAIL_FROM ou connectez Gmail."
+  if (message === "CLIENT_AUTH_DELIVERY_UNAVAILABLE") return "Connexion validée, mais aucun canal de vérification client n’est disponible. Vérifiez le courriel Resend ou ajoutez un numéro de téléphone au dossier client."
   if (message.startsWith("EMAIL_SEND_FAILED:")) return "Connexion validée, mais le fournisseur courriel a refusé l’envoi du code."
   return null
 }
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       challengeId: challenge.challengeId,
       expiresAt: challenge.expiresAt.toISOString(),
       email: challenge.email,
+      deliveryChannel: challenge.deliveryChannel,
       redirectUrl: redirectUrl ?? "/post-auth",
     })
   } catch (error) {
