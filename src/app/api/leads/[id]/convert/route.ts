@@ -38,20 +38,56 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const client = await prisma.$transaction(async (tx) => {
-      const createdClient = await tx.client.create({
-        data: {
+      const previousConversion = await tx.activity.findFirst({
+        where: {
           organizationId,
-          advisorId: lead.advisorId ?? userId,
-          firstName: lead.firstName,
-          lastName: lead.lastName,
-          phone: lead.phone,
-          email: lead.email,
-          address: lead.address,
-          goals: lead.interestType,
-          notes: lead.notes,
-          status: "PROSPECT_CONVERTED",
+          leadId: lead.id,
+          type: "LEAD_CONVERTED",
+          clientId: { not: null },
         },
+        orderBy: { createdAt: "desc" },
+        select: { clientId: true },
       })
+
+      const reusableClient = previousConversion?.clientId
+        ? await tx.client.findFirst({
+            where: {
+              id: previousConversion.clientId,
+              organizationId,
+              status: { in: ["ARCHIVED", "PROSPECT_CONVERTED"] },
+            },
+          })
+        : null
+
+      const convertedClient = reusableClient
+        ? await tx.client.update({
+            where: { id: reusableClient.id },
+            data: {
+              advisorId: lead.advisorId ?? userId,
+              firstName: lead.firstName,
+              lastName: lead.lastName,
+              phone: lead.phone,
+              email: lead.email,
+              address: lead.address,
+              goals: lead.interestType,
+              notes: lead.notes,
+              status: "PROSPECT_CONVERTED",
+            },
+          })
+        : await tx.client.create({
+            data: {
+              organizationId,
+              advisorId: lead.advisorId ?? userId,
+              firstName: lead.firstName,
+              lastName: lead.lastName,
+              phone: lead.phone,
+              email: lead.email,
+              address: lead.address,
+              goals: lead.interestType,
+              notes: lead.notes,
+              status: "PROSPECT_CONVERTED",
+            },
+          })
 
       await tx.lead.updateMany({
         where: { id: lead.id, organizationId },
@@ -62,7 +98,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         },
       })
 
-      return createdClient
+      return convertedClient
     })
 
     await createActivity({

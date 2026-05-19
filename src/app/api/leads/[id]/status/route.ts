@@ -39,6 +39,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         interestType: true,
         notes: true,
         status: true,
+        convertedAt: true,
       },
     })
 
@@ -49,17 +50,53 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       )
     }
 
-    await prisma.lead.updateMany({
-      where: { id, organizationId },
-      data: {
-        status,
-        previousStatus: existingLead.status,
-        nextAction,
-        lostReason: status === "LOST" ? lostReason : undefined,
-        lostNote: status === "LOST" ? lostNote : undefined,
-        lostAt: status === "LOST" ? new Date() : undefined,
-        archivedAt: status === "ARCHIVED" ? new Date() : undefined,
-      },
+    const revertedConvertedClient = await prisma.$transaction(async (tx) => {
+      await tx.lead.updateMany({
+        where: { id, organizationId },
+        data: {
+          status,
+          previousStatus: existingLead.status,
+          nextAction,
+          convertedAt: existingLead.status === "CONVERTED" ? null : undefined,
+          lostReason: status === "LOST" ? lostReason : undefined,
+          lostNote: status === "LOST" ? lostNote : undefined,
+          lostAt: status === "LOST" ? new Date() : undefined,
+          archivedAt: status === "ARCHIVED" ? new Date() : undefined,
+        },
+      })
+
+      if (existingLead.status !== "CONVERTED") return null
+
+      const conversionActivity = await tx.activity.findFirst({
+        where: {
+          organizationId,
+          leadId: existingLead.id,
+          type: "LEAD_CONVERTED",
+          clientId: { not: null },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { clientId: true },
+      })
+
+      if (!conversionActivity?.clientId) return null
+
+      const client = await tx.client.findFirst({
+        where: {
+          id: conversionActivity.clientId,
+          organizationId,
+          status: "PROSPECT_CONVERTED",
+        },
+        select: { id: true, firstName: true, lastName: true },
+      })
+
+      if (!client) return null
+
+      await tx.client.update({
+        where: { id: client.id },
+        data: { status: "ARCHIVED" },
+      })
+
+      return client
     })
 
     const lead = await prisma.lead.findFirstOrThrow({
@@ -108,6 +145,26 @@ export async function PATCH(request: Request, { params }: RouteContext) {
           email: lead.email,
         },
       })
+
+      if (revertedConvertedClient) {
+        await createCrmActivity({
+          organizationId,
+          userId,
+          leadId: lead.id,
+          clientId: revertedConvertedClient.id,
+          type: "CLIENT_ARCHIVED",
+          title: "Conversion annulée",
+          description: `${revertedConvertedClient.firstName} ${revertedConvertedClient.lastName} a été retiré des clients actifs après le retour du prospect en statut ${leadStatusLabels[status]}.`,
+          entityType: "Client",
+          entityId: revertedConvertedClient.id,
+          metadata: {
+            leadId: lead.id,
+            oldLeadStatus: existingLead.status,
+            newLeadStatus: status,
+            reason: "LEAD_STATUS_REVERTED_FROM_CONVERTED",
+          },
+        })
+      }
 
       const template = leadStatusTaskTemplates[status]
       if (template) {
