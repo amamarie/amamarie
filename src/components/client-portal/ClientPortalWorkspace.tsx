@@ -1224,9 +1224,11 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                   <div className="mt-4 h-4 overflow-hidden rounded-full bg-white/20">
                     <div className="h-full rounded-full bg-emerald-400" style={{ width: `${Math.max(6, completion)}%` }} />
                   </div>
-                  <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold leading-5 text-emerald-50">
-                    Prochaine action: {nextAction}
-                  </p>
+                  {isPreview ? (
+                    <p className="mt-3 rounded-2xl bg-white/15 px-3 py-2 text-sm font-bold leading-5 text-emerald-50">
+                      Prochaine action: {nextAction}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </section>
@@ -1274,6 +1276,7 @@ export function ClientPortalWorkspace({ userName, userEmail, client, isPreview =
                 greetingName={greetingName}
                 completion={completion}
                 nextAction={nextAction}
+                showNextAction={isPreview}
                 advisorName={client.advisor?.name ?? "À assigner"}
                 primaryHref={activePageDetails.primaryPage ? portalHref(activePageDetails.primaryPage) : undefined}
                 secondaryHref={activePageDetails.secondaryPage ? portalHref(activePageDetails.secondaryPage) : undefined}
@@ -1921,9 +1924,11 @@ function PortalSidebar({
         <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
           <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.max(6, completion)}%` }} />
         </div>
-        <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">
-          Prochaine action: <span className="font-black text-slate-950">{nextAction}</span>
-        </p>
+        {isPreview ? (
+          <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">
+            Prochaine action: <span className="font-black text-slate-950">{nextAction}</span>
+          </p>
+        ) : null}
 
         <nav className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1" aria-label="Sections du portail client">
           {items.map((item) => (
@@ -2044,6 +2049,7 @@ function SectionPageHeader({
   greetingName,
   completion,
   nextAction,
+  showNextAction,
   advisorName,
   primaryHref,
   secondaryHref,
@@ -2053,6 +2059,7 @@ function SectionPageHeader({
   greetingName: string
   completion: number
   nextAction: string
+  showNextAction?: boolean
   advisorName: string
   primaryHref?: string
   secondaryHref?: string
@@ -2077,9 +2084,11 @@ function SectionPageHeader({
         </div>
       </div>
       <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
-        <p className="min-w-0 text-sm font-bold leading-6 text-slate-600">
-          Prochaine action : <span className="font-black text-slate-950">{nextAction}</span>
-        </p>
+        {showNextAction ? (
+          <p className="min-w-0 text-sm font-bold leading-6 text-slate-600">
+            Prochaine action : <span className="font-black text-slate-950">{nextAction}</span>
+          </p>
+        ) : <span aria-hidden="true" />}
         <div className="flex shrink-0 flex-wrap gap-2">
           {details.primaryLabel && primaryHref ? (
             <Button asChild className="h-auto min-h-9 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700">
