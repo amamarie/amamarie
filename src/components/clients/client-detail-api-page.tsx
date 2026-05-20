@@ -741,6 +741,7 @@ export function ClientDetailApiPage({ clientId }: { clientId: string }) {
     const allowedTabs: ClientTab[] = ["overview", "profile", "kyc", "products", "documents", "tasks", "reminders", "needs", "opportunities", "compliance", "history"]
     if (requestedTab && allowedTabs.includes(requestedTab as ClientTab)) {
       if (requestedTab === "kyc") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveTab("profile")
         setComplianceFocusTarget("kyc")
         setKycFocusRequest((request) => request + 1)

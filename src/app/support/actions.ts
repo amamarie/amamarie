@@ -12,7 +12,7 @@ export async function createAdvisorSupportTicket(formData: FormData) {
   const user = await requireSaasRole([...advisorRoles])
   const subject = String(formData.get("subject") ?? "").trim()
   const description = String(formData.get("description") ?? "").trim() || null
-  const module = String(formData.get("module") ?? "").trim() || null
+  const ticketModule = String(formData.get("module") ?? "").trim() || null
   const priority = String(formData.get("priority") ?? "NORMAL")
 
   if (!subject) {
@@ -25,7 +25,7 @@ export async function createAdvisorSupportTicket(formData: FormData) {
       createdById: user.id,
       subject,
       description,
-      module,
+      module: ticketModule,
       priority,
       status: "OPEN",
       source: "ADVISOR",
@@ -39,7 +39,7 @@ export async function createAdvisorSupportTicket(formData: FormData) {
       action: "ADVISOR_SUPPORT_TICKET_CREATED",
       entityType: "SuperAdminTicket",
       entityId: ticket.id,
-      newValue: { subject, priority, module },
+      newValue: { subject, priority, module: ticketModule },
     },
   }).catch(() => null)
 

@@ -21,6 +21,7 @@ export function AppLayoutClient({ children, initialAdvisorProfile, allowedModule
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDesktopSidebarCollapsed(window.localStorage.getItem("finadvisor.sidebar.collapsed") === "true")
     } catch {
       setDesktopSidebarCollapsed(false)

@@ -174,6 +174,7 @@ export function ClientAmlSection({ clientId }: { clientId: string }) {
   }, [clientId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
 

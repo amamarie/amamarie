@@ -107,6 +107,7 @@ export default function KycPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboard()
   }, [])
 

@@ -17,10 +17,13 @@ export async function GET() {
   try {
     const { organizationId, userId } = await getTenantContext()
     const permissions = await prisma.calendarPermission.findMany({
-      where: { organizationId, viewerUserId: userId },
+      where: { organizationId, targetUserId: userId },
       orderBy: { createdAt: "desc" },
     })
-    return ok(permissions)
+    return ok(permissions.map((permission) => ({
+      ...permission,
+      targetUserId: permission.viewerUserId,
+    })))
   } catch (error) {
     return handleApiError(error)
   }
@@ -40,7 +43,7 @@ export async function PUT(request: Request) {
     if (!target) return fail("NOT_FOUND", "Conseiller introuvable.", 404)
 
     await prisma.calendarPermission.deleteMany({
-      where: { organizationId, viewerUserId: userId, targetUserId: payload.targetUserId },
+      where: { organizationId, viewerUserId: payload.targetUserId, targetUserId: userId },
     })
 
     if (payload.permissionLevel === "NONE") return ok({ permissionLevel: "NONE" })
@@ -48,12 +51,12 @@ export async function PUT(request: Request) {
     const permission = await prisma.calendarPermission.create({
       data: {
         organizationId,
-        viewerUserId: userId,
-        targetUserId: payload.targetUserId,
+        viewerUserId: payload.targetUserId,
+        targetUserId: userId,
         permissionLevel: payload.permissionLevel,
       },
     })
-    return ok(permission)
+    return ok({ ...permission, targetUserId: permission.viewerUserId })
   } catch (error) {
     return handleApiError(error)
   }

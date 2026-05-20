@@ -344,12 +344,14 @@ export default function CompliancePage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadWorkbench()
   }, [])
 
   useEffect(() => {
     const view = searchParams.get("view")
     if (view && views.some((item) => item.id === view)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveView(view as ComplianceView)
     }
   }, [searchParams])

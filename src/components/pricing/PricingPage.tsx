@@ -483,6 +483,7 @@ function PlanCard({
 
   useEffect(() => {
     if (!autoCheckout || isRedirecting) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void startCheckout()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCheckout])

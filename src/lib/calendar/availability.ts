@@ -40,6 +40,7 @@ export function getAvailableSlots({
   holds,
   exceptions,
   rules,
+  bookingCount,
   now = new Date(),
 }: {
   date: Date
@@ -48,6 +49,7 @@ export function getAvailableSlots({
   holds?: BusyRange[]
   exceptions?: Array<{ date: Date; startMinutes?: number | null; endMinutes?: number | null; type: string }>
   rules: MeetingTypeRules
+  bookingCount?: number
   now?: Date
 }) {
   const minimumNoticeMs = (rules.minimumNoticeHours ?? 24) * 60 * 60 * 1000
@@ -58,8 +60,8 @@ export function getAvailableSlots({
   const fullDayBlocked = dayExceptions.some((exception) => exception.type === "UNAVAILABLE" && exception.startMinutes == null && exception.endMinutes == null)
   if (fullDayBlocked) return []
 
-  const bookingCount = busyRanges.filter((range) => sameDay(range.start, date)).length
-  if ((rules.maxBookingsPerDay ?? 0) > 0 && bookingCount >= (rules.maxBookingsPerDay ?? 0)) return []
+  const currentBookingCount = bookingCount ?? busyRanges.filter((range) => sameDay(range.start, date)).length
+  if ((rules.maxBookingsPerDay ?? 0) > 0 && currentBookingCount >= (rules.maxBookingsPerDay ?? 0)) return []
 
   const busyWithBuffers = [...busyRanges, ...(holds ?? [])].map((range) => ({
     start: new Date(range.start.getTime() - bufferBeforeMs),

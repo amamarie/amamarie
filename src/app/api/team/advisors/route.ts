@@ -40,6 +40,17 @@ export async function GET() {
         routingLanguages: true,
         licenseNumber: true,
         routingPriority: true,
+        advisorProfile: {
+          select: {
+            publicSlug: true,
+            publicName: true,
+            publicDescription: true,
+            avatarUrl: true,
+            bookingEnabled: true,
+            defaultMeetingLocation: true,
+            timezone: true,
+          },
+        },
         _count: {
           select: {
             leads: { where: { status: { notIn: ["CONVERTED", "LOST", "ARCHIVED"] } } },

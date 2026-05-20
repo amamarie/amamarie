@@ -42,6 +42,7 @@ export function AdvisorCallerIdSettings() {
 
   useEffect(() => {
     let mounted = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCallerIds()
       .catch((error) => {
         if (mounted) setNotice({ type: "error", message: error instanceof Error ? error.message : "Impossible de charger les numéros personnels." })

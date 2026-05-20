@@ -855,13 +855,13 @@ export async function createSuperAdminTicket(formData: FormData) {
   const subject = String(formData.get("subject") ?? "").trim()
   const description = String(formData.get("description") ?? "").trim() || null
   const priority = String(formData.get("priority") ?? "NORMAL")
-  const module = String(formData.get("module") ?? "").trim() || null
+  const ticketModule = String(formData.get("module") ?? "").trim() || null
   if (!organizationId || !subject) return
 
   const ticket = await prisma.superAdminTicket.create({
-    data: { organizationId, createdById: currentUser.id, subject, description, priority, module, status: "OPEN" },
+    data: { organizationId, createdById: currentUser.id, subject, description, priority, module: ticketModule, status: "OPEN" },
   })
-  await writeSuperAdminAudit(organizationId, currentUser.id, "SUPER_ADMIN_TICKET_CREATED", "SuperAdminTicket", ticket.id, { subject, priority, module })
+  await writeSuperAdminAudit(organizationId, currentUser.id, "SUPER_ADMIN_TICKET_CREATED", "SuperAdminTicket", ticket.id, { subject, priority, module: ticketModule })
   revalidateSuperAdminPaths(organizationId)
 }
 
@@ -1077,18 +1077,18 @@ export async function createPlatformIncident(formData: FormData) {
   const currentUser = await requireSaasRole(["DEVELOPER"])
   const organizationId = String(formData.get("organizationId") ?? "")
   const title = String(formData.get("title") ?? "").trim()
-  const module = String(formData.get("module") ?? "Technique").trim()
+  const incidentModule = String(formData.get("module") ?? "Technique").trim()
   const priority = String(formData.get("priority") ?? "NORMAL")
   const description = String(formData.get("description") ?? "").trim() || null
   if (!title) return
 
-  const incident = await prisma.platformIncident.create({ data: { title, module, priority, description, status: "OPEN" } })
+  const incident = await prisma.platformIncident.create({ data: { title, module: incidentModule, priority, description, status: "OPEN" } })
   if (organizationId) {
     await prisma.platformIncidentImpact.create({
       data: { incidentId: incident.id, organizationId, impactLevel: priority === "CRITICAL" ? "HIGH" : "MEDIUM" },
     }).catch(() => null)
   }
-  await writeSuperAdminAudit(organizationId || currentUser.organizationId, currentUser.id, "PLATFORM_INCIDENT_CREATED", "PlatformIncident", incident.id, { title, module, priority })
+  await writeSuperAdminAudit(organizationId || currentUser.organizationId, currentUser.id, "PLATFORM_INCIDENT_CREATED", "PlatformIncident", incident.id, { title, module: incidentModule, priority })
   revalidatePath("/developpeur")
   revalidatePath("/developpeur/plans")
   if (organizationId) revalidateSuperAdminPaths(organizationId)

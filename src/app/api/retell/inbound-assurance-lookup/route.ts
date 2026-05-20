@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const advisor = await defaultAdvisor(organizationId, match.advisorId ?? orgMatch.settings?.defaultAdvisorId)
 
     let leadId = match.type === "LEAD" ? match.id : null
-    let client = match.type === "CLIENT" && match.id
+    const client = match.type === "CLIENT" && match.id
       ? await prisma.client.findFirst({
           where: { id: match.id, organizationId },
           select: { id: true, firstName: true, lastName: true, province: true, status: true, goals: true, primaryGoal: true, advisorId: true },

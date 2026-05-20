@@ -9,10 +9,32 @@ type TwilioOutgoingCallerId = {
   friendlyName?: string
 }
 
+type TwilioValidationRequest = {
+  validationCode?: string | number | null
+}
+
+type TwilioCallerIdClient = {
+  outgoingCallerIds: {
+    list(options: { phoneNumber: string; limit: number }): Promise<TwilioOutgoingCallerId[]>
+  }
+  validationRequests: {
+    create(options: {
+      friendlyName: string
+      phoneNumber: string
+      statusCallback?: string
+      statusCallbackMethod?: "POST"
+    }): Promise<TwilioValidationRequest>
+  }
+}
+
 function getOrganizationTwilioCredentials(settings: { twilioAccountSid?: string | null; twilioAuthToken?: string | null }) {
   return settings.twilioAccountSid && settings.twilioAuthToken
     ? { accountSid: settings.twilioAccountSid, authToken: settings.twilioAuthToken }
     : undefined
+}
+
+function getCallerIdClient(credentials?: { accountSid?: string | null; authToken?: string | null }) {
+  return getTwilioClient(credentials) as unknown as TwilioCallerIdClient
 }
 
 function sanitizeCallerId(record: {
@@ -42,8 +64,8 @@ async function findTwilioCallerId({
   phoneNumber: string
 }) {
   const settings = await ensureCommunicationSettings(organizationId)
-  const client = getTwilioClient(getOrganizationTwilioCredentials(settings))
-  const matches = await (client as any).outgoingCallerIds.list({ phoneNumber, limit: 20 }) as TwilioOutgoingCallerId[]
+  const client = getCallerIdClient(getOrganizationTwilioCredentials(settings))
+  const matches = await client.outgoingCallerIds.list({ phoneNumber, limit: 20 })
   return matches.find((callerId) => normalizePhoneNumber(callerId.phoneNumber) === phoneNumber) ?? matches[0] ?? null
 }
 
@@ -110,9 +132,9 @@ export async function startAdvisorTwilioCallerIdVerification({
   }
 
   const settings = await ensureCommunicationSettings(organizationId)
-  const client = getTwilioClient(getOrganizationTwilioCredentials(settings))
+  const client = getCallerIdClient(getOrganizationTwilioCredentials(settings))
   const appUrl = getAppUrl()
-  const validationRequest = await (client as any).validationRequests.create({
+  const validationRequest = await client.validationRequests.create({
     friendlyName: label,
     phoneNumber: normalizedPhoneNumber,
     ...(appUrl ? {

@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { fail, handleApiError, ok } from "@/lib/api-response"
 import { cancelExternalCalendarEvent, syncExternalCalendarEvent } from "@/lib/calendar/external"
+import { getServerAvailableSlots } from "@/lib/calendar/server-availability"
 import { prisma } from "@/lib/prisma"
 
 const rescheduleSchema = z.object({
@@ -138,18 +139,62 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ to
     const endAt = new Date(payload.endAt)
     if (endAt <= startAt) return fail("INVALID_RANGE", "L’heure de fin doit être après l’heure de début.", 422)
 
-    const conflictingEvent = await prisma.calendarEvent.findFirst({
-      where: {
-        organizationId: booking.organizationId,
-        advisorId: booking.advisorId,
-        id: booking.calendarEventId ? { not: booking.calendarEventId } : undefined,
-        status: { notIn: ["CANCELLED", "ARCHIVED"] },
-        startAt: { lt: endAt },
-        endAt: { gt: startAt },
-      },
-      select: { id: true },
+    const availability = await getServerAvailableSlots({
+      organizationId: booking.organizationId,
+      advisorId: booking.advisorId,
+      date: startAt,
+      meetingTypeId: booking.meetingTypeId,
+      timezone: payload.timezone,
+      excludeBookingId: booking.id,
+      excludeCalendarEventId: booking.calendarEventId,
     })
-    if (conflictingEvent) return fail("SLOT_UNAVAILABLE", "Ce créneau n’est plus disponible.", 409)
+    const slotIsAvailable = availability.slots.some((slot) => {
+      const slotStart = new Date(slot.start)
+      const slotEnd = new Date(slot.end)
+      return slotStart.getTime() === startAt.getTime() && slotEnd.getTime() === endAt.getTime()
+    })
+    if (!slotIsAvailable) return fail("SLOT_UNAVAILABLE", "Ce créneau n’est plus disponible.", 409)
+
+    const slotReserved = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${booking.advisorId}))`
+      const [conflictingEvent, conflictingBooking, conflictingHold] = await Promise.all([
+        tx.calendarEvent.findFirst({
+          where: {
+            organizationId: booking.organizationId,
+            advisorId: booking.advisorId,
+            id: booking.calendarEventId ? { not: booking.calendarEventId } : undefined,
+            status: { notIn: ["CANCELLED", "ARCHIVED"] },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+          },
+          select: { id: true },
+        }),
+        tx.booking.findFirst({
+          where: {
+            organizationId: booking.organizationId,
+            advisorId: booking.advisorId,
+            id: { not: booking.id },
+            status: { notIn: ["CANCELLED", "ARCHIVED"] },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+          },
+          select: { id: true },
+        }),
+        tx.bookingHold.findFirst({
+          where: {
+            organizationId: booking.organizationId,
+            advisorId: booking.advisorId,
+            status: "ACTIVE",
+            expiresAt: { gt: new Date() },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+          },
+          select: { id: true },
+        }),
+      ])
+      return !(conflictingEvent || conflictingBooking || conflictingHold)
+    })
+    if (!slotReserved) return fail("SLOT_UNAVAILABLE", "Ce créneau vient d’être réservé. Choisissez une autre heure.", 409)
 
     const calendarEvent = booking.calendarEventId ? await prisma.calendarEvent.findFirst({
       where: { id: booking.calendarEventId, organizationId: booking.organizationId },

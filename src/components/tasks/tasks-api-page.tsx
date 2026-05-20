@@ -334,10 +334,10 @@ export function TasksApiPage() {
         <div className="border-b-2 border-emerald-100 bg-white p-5">
           <div className="grid gap-5 xl:grid-cols-[1fr_280px] xl:items-stretch">
             <div className="rounded-[1.75rem] border-2 border-emerald-200 bg-emerald-500 p-5 text-white shadow-[0_8px_0_#16a34a]">
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Centre d'action conseiller</p>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-50">Centre d&apos;action conseiller</p>
               <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight">Tâches reliées aux dossiers clients</h1>
               <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
-                Priorisez les appels, documents, profils client, renouvellements et suivis générés par les règles d'automatisation.
+                Priorisez les appels, documents, profils client, renouvellements et suivis générés par les règles d&apos;automatisation.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {["Client", "Prospect", "Profil client", "Document", "Conformité"].map((step) => (
@@ -359,7 +359,7 @@ export function TasksApiPage() {
             <div className="rounded-[1.75rem] border-2 border-slate-200 bg-slate-50 p-5 shadow-[0_8px_0_#e2e8f0]">
               <p className="text-xs font-black uppercase tracking-wide text-slate-400">Charge active</p>
               <p className="mt-2 text-4xl font-black text-slate-950">{activeWorkload}</p>
-              <p className="mt-1 text-sm font-bold text-slate-600">tâche(s) à surveiller aujourd'hui, en retard ou urgente(s).</p>
+              <p className="mt-1 text-sm font-bold text-slate-600">tâche(s) à surveiller aujourd&apos;hui, en retard ou urgente(s).</p>
               <div className="mt-4 h-4 overflow-hidden rounded-full border-2 border-slate-200 bg-white">
                 <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(completionRate, 100)}%` }} />
               </div>

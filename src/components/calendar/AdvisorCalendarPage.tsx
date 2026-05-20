@@ -4,23 +4,7 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import timeGridPlugin from "@fullcalendar/timegrid"
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  Clock3,
-  Copy,
-  Edit3,
-  ExternalLink,
-  Filter,
-  Loader2,
-  Mail,
-  PhoneCall,
-  Plus,
-  Save,
-  Search,
-  Trash2,
-} from "lucide-react"
+import { CalendarClock, Copy, ExternalLink, Filter, Loader2, Plus, Save, Search, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { ContentCard, PageShell, StatusBadge } from "@/components/crm/page-shell"
@@ -93,6 +77,15 @@ type AdvisorOption = {
   name: string
   email: string
   title?: string | null
+  advisorProfile?: {
+    publicSlug: string
+    publicName: string
+    publicDescription?: string | null
+    avatarUrl?: string | null
+    bookingEnabled: boolean
+    defaultMeetingLocation: string
+    timezone: string
+  } | null
   availabilitySlots?: AvailabilitySlot[]
   _count?: {
     assignedTasks?: number
@@ -129,6 +122,17 @@ type CalendarPermissionOption = {
   permissionLevel: string
 }
 
+type AdvisorProfileOption = {
+  id: string
+  publicSlug: string
+  publicName: string
+  publicDescription?: string | null
+  avatarUrl?: string | null
+  bookingEnabled: boolean
+  defaultMeetingLocation: string
+  timezone: string
+}
+
 type CurrentUser = {
   id: string
   name: string
@@ -136,13 +140,7 @@ type CurrentUser = {
   title?: string | null
 }
 
-const dayLabels = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]
 const dayFullLabels = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
-const weekStartHour = 0
-const weekEndHour = 24
-const weekHourHeight = 56
-const weekGridTemplateColumns = "64px repeat(7, minmax(0, 1fr))"
-const dayGridTemplateColumns = "80px minmax(0, 1fr)"
 const creatableTaskTypes = [
   ["MEETING", "RDV client"],
   ["CALL", "Appel"],
@@ -221,10 +219,6 @@ function timeToMinutes(value: string) {
   return hours * 60 + minutes
 }
 
-function addMinutesToLabel(startMinutes: number, durationMinutes: number) {
-  return minutesLabel(Math.min(startMinutes + durationMinutes, 24 * 60))
-}
-
 function minutesSinceMidnight(date: Date) {
   return date.getHours() * 60 + date.getMinutes()
 }
@@ -295,25 +289,6 @@ function calendarEventToTask(event: CalendarEventRecord, advisors: AdvisorOption
   }
 }
 
-function weekEventPosition(task: CalendarTask) {
-  const date = task.dueDate ? new Date(task.dueDate) : new Date()
-  const startMinutes = minutesSinceMidnight(date)
-  const visibleStartMinutes = weekStartHour * 60
-  const visibleEndMinutes = weekEndHour * 60
-  const duration = eventDurationMinutes(task)
-  const clampedStart = Math.max(startMinutes, visibleStartMinutes)
-  const clampedEnd = Math.min(startMinutes + duration, visibleEndMinutes)
-  const top = ((clampedStart - visibleStartMinutes) / 60) * weekHourHeight
-  const height = Math.max(38, ((clampedEnd - clampedStart) / 60) * weekHourHeight)
-  return { top, height }
-}
-
-function currentTimeTop(now: Date) {
-  const minutes = minutesSinceMidnight(now)
-  if (minutes < weekStartHour * 60 || minutes > weekEndHour * 60) return null
-  return ((minutes - weekStartHour * 60) / 60) * weekHourHeight
-}
-
 function taskTone(task: CalendarTask) {
   if (task.status === "OVERDUE" || task.priority === "URGENT") return "border-rose-200 bg-rose-50 text-rose-800"
   if (task.type === "DOCUMENT" || task.type === "KYC" || task.type === "COMPLIANCE") return "border-amber-200 bg-amber-50 text-amber-800"
@@ -345,39 +320,6 @@ function taskTypeLabel(type: CalendarTask["type"]) {
     REMINDER: "Rappel",
   }
   return labels[type] ?? type
-}
-
-function priorityLabel(priority: string) {
-  const labels: Record<string, string> = {
-    URGENT: "Critique",
-    HIGH: "Haute",
-    NORMAL: "Moyenne",
-    LOW: "Basse",
-    INFO: "Info",
-  }
-  return labels[priority] ?? priority
-}
-
-function priorityTone(priority: string): "emerald" | "sky" | "violet" | "amber" | "rose" | "slate" {
-  if (priority === "URGENT") return "rose"
-  if (priority === "HIGH") return "amber"
-  if (priority === "INFO") return "sky"
-  if (priority === "LOW") return "slate"
-  return "violet"
-}
-
-function eventContactName(task: CalendarTask) {
-  if (task.client) return `${task.client.firstName} ${task.client.lastName}`
-  if (task.lead) return `${task.lead.firstName} ${task.lead.lastName}`
-  return "Interne"
-}
-
-function eventPhone(task: CalendarTask) {
-  return task.client?.phone ?? task.lead?.phone ?? null
-}
-
-function eventEmail(task: CalendarTask) {
-  return task.client?.email ?? task.lead?.email ?? null
 }
 
 function eventSearchText(task: CalendarTask) {
@@ -434,153 +376,6 @@ async function copyToClipboard(value: string) {
   document.body.removeChild(textArea)
 }
 
-function EventActions({
-  task,
-  isCompleting,
-  onComplete,
-  isRescheduling,
-  onReschedule,
-}: {
-  task: CalendarTask
-  isCompleting: boolean
-  onComplete: (task: CalendarTask) => void
-  isRescheduling: boolean
-  onReschedule: (task: CalendarTask) => void
-}) {
-  const phone = eventPhone(task)
-  const email = eventEmail(task)
-  const canComplete = !["DONE", "CANCELLED", "ARCHIVED"].includes(task.status)
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {phone ? (
-        <Button type="button" size="sm" variant="outline" asChild>
-          <a href={`tel:${phone}`}>
-            <PhoneCall className="size-4" />
-            Appeler
-          </a>
-        </Button>
-      ) : null}
-      {email ? (
-        <Button type="button" size="sm" variant="outline" asChild>
-          <a href={`mailto:${email}`}>
-            <Mail className="size-4" />
-            Email
-          </a>
-        </Button>
-      ) : null}
-      {task.href ? (
-        <Button type="button" size="sm" variant="outline" asChild>
-          <a href={task.href}>
-            <ExternalLink className="size-4" />
-            Ouvrir
-          </a>
-        </Button>
-      ) : null}
-      {task.client?.id ? (
-        <Button type="button" size="sm" variant="outline" asChild>
-          <a href={`/clients/${task.client.id}`}>Fiche client</a>
-        </Button>
-      ) : null}
-      {(task.type === "DOCUMENT" || task.type === "KYC") && task.client?.id ? (
-        <Button type="button" size="sm" variant="outline" asChild>
-          <a href={`/clients/${task.client.id}`}>Demander document</a>
-        </Button>
-      ) : null}
-      {canComplete ? (
-        <Button type="button" size="sm" variant="outline" onClick={() => onReschedule(task)} disabled={isRescheduling}>
-          {isRescheduling ? <Loader2 className="size-4 animate-spin" /> : <CalendarClock className="size-4" />}
-          Reporter demain
-        </Button>
-      ) : null}
-      {canComplete ? (
-        <Button type="button" size="sm" onClick={() => onComplete(task)} disabled={isCompleting}>
-          {isCompleting ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-          Terminer
-        </Button>
-      ) : null}
-    </div>
-  )
-}
-
-function AgendaEvent({
-  task,
-  isCompleting,
-  onComplete,
-  isRescheduling,
-  onReschedule,
-}: {
-  task: CalendarTask
-  isCompleting: boolean
-  onComplete: (task: CalendarTask) => void
-  isRescheduling: boolean
-  onReschedule: (task: CalendarTask) => void
-}) {
-  return (
-    <article className={`rounded-2xl border-2 p-3 shadow-[0_4px_0_#e2e8f0] ${taskTone(task)}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase">
-            {task.dueDate ? formatTime(new Date(task.dueDate)) : "Heure à préciser"} · {taskTypeLabel(task.type)}
-          </p>
-          <h4 className="mt-1 font-black">{task.title}</h4>
-          <p className="mt-1 text-sm font-semibold opacity-80">{eventContactName(task)}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusBadge tone={priorityTone(task.priority)}>{priorityLabel(task.priority)}</StatusBadge>
-          {task.status === "OVERDUE" ? <StatusBadge tone="rose">En retard</StatusBadge> : null}
-        </div>
-      </div>
-
-      {task.context?.length || task.alerts?.length || task.opportunities?.length ? (
-        <div className="mt-3 grid gap-2 xl:grid-cols-3">
-          {task.context?.length ? (
-            <div className="rounded-2xl bg-white/75 p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.08em] opacity-70">Contexte</p>
-              <ul className="mt-2 space-y-1 text-xs font-semibold leading-5">
-                {task.context.slice(0, 4).map((item) => <li key={item}>- {item}</li>)}
-              </ul>
-            </div>
-          ) : null}
-          {task.alerts?.length ? (
-            <div className="rounded-2xl bg-white/75 p-3">
-              <p className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] opacity-70">
-                <AlertTriangle className="size-3.5" />
-                Alertes
-              </p>
-              <ul className="mt-2 space-y-1 text-xs font-semibold leading-5">
-                {task.alerts.slice(0, 4).map((item) => <li key={item}>- {item}</li>)}
-              </ul>
-            </div>
-          ) : null}
-          {task.opportunities?.length ? (
-            <div className="rounded-2xl bg-white/75 p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.08em] opacity-70">Opportunités</p>
-              <ul className="mt-2 space-y-1 text-xs font-semibold leading-5">
-                {task.opportunities.slice(0, 4).map((item) => <li key={item}>- {item}</li>)}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {task.recommendedAction ? (
-        <div className="mt-3 rounded-2xl bg-white/75 p-3 text-xs font-black leading-5">
-          Action recommandée : {task.recommendedAction}
-        </div>
-      ) : null}
-
-      <EventActions
-        task={task}
-        isCompleting={isCompleting}
-        onComplete={onComplete}
-        isRescheduling={isRescheduling}
-        onReschedule={onReschedule}
-      />
-    </article>
-  )
-}
-
 export function AdvisorCalendarPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()))
@@ -593,6 +388,7 @@ export function AdvisorCalendarPage() {
   const [meetingTypes, setMeetingTypes] = useState<MeetingTypeOption[]>([])
   const [availabilityExceptions, setAvailabilityExceptions] = useState<AvailabilityExceptionOption[]>([])
   const [calendarPermissions, setCalendarPermissions] = useState<CalendarPermissionOption[]>([])
+  const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfileOption | null>(null)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -603,8 +399,6 @@ export function AdvisorCalendarPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [selectedCalendarTask, setSelectedCalendarTask] = useState<CalendarTask | null>(null)
   const [isDeletingEvent, setIsDeletingEvent] = useState(false)
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
-  const [reschedulingTaskId, setReschedulingTaskId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>("ALL")
   const [advisorFilter, setAdvisorFilter] = useState("ALL")
@@ -620,7 +414,6 @@ export function AdvisorCalendarPage() {
   const [eventStart, setEventStart] = useState("09:00")
   const [eventEnd, setEventEnd] = useState("09:45")
   const [eventMode, setEventMode] = useState<"VIDEO" | "PHONE" | "IN_PERSON">("VIDEO")
-  const [slotFinderDuration, setSlotFinderDuration] = useState(45)
   const [meetingTypeName, setMeetingTypeName] = useState("Bilan retraite")
   const [meetingTypeDuration, setMeetingTypeDuration] = useState(45)
   const [meetingTypeStep, setMeetingTypeStep] = useState(30)
@@ -634,17 +427,12 @@ export function AdvisorCalendarPage() {
   const [exceptionReason, setExceptionReason] = useState("Indisponible")
   const [permissionTargetUserId, setPermissionTargetUserId] = useState("")
   const [permissionLevel, setPermissionLevel] = useState("FREE_BUSY_ONLY")
-  const [now, setNow] = useState(() => new Date())
-
+  const [publicSlug, setPublicSlug] = useState("")
+  const [publicName, setPublicName] = useState("")
+  const [publicDescription, setPublicDescription] = useState("")
+  const [bookingEnabled, setBookingEnabled] = useState(true)
+  const [publicTimezone, setPublicTimezone] = useState("America/Toronto")
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart])
-  const weekHours = useMemo(() => Array.from({ length: weekEndHour - weekStartHour + 1 }, (_, index) => (weekStartHour + index) * 60), [])
-  const weekSlots = useMemo(() => Array.from({ length: (weekEndHour - weekStartHour) * 2 }, (_, index) => weekStartHour * 60 + index * 30), [])
-  const nowTop = useMemo(() => currentTimeTop(now), [now])
-  const monthDays = useMemo(() => {
-    const first = startOfMonth(monthCursor)
-    const firstGridDay = addDays(first, -first.getDay())
-    return Array.from({ length: 42 }, (_, index) => addDays(firstGridDay, index))
-  }, [monthCursor])
 
   const filteredTasks = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -654,10 +442,6 @@ export function AdvisorCalendarPage() {
       (!query || eventSearchText(task).includes(query))
     ))
   }, [advisorFilter, calendarFilter, searchTerm, tasks])
-
-  const selectedDayTasks = useMemo(() => filteredTasks
-    .filter((task) => task.dueDate && sameDay(new Date(task.dueDate), selectedDay))
-    .sort((a, b) => new Date(a.dueDate as string).getTime() - new Date(b.dueDate as string).getTime()), [filteredTasks, selectedDay])
 
   const selectedDaySlots = useMemo(() => availability
     .filter((slot) => slot.isActive && slot.dayOfWeek === selectedDay.getDay())
@@ -680,27 +464,6 @@ export function AdvisorCalendarPage() {
       .sort((a, b) => a.startMinutes - b.startMinutes),
   })), [advisors, selectedDay, tasks])
 
-  const availableTeamSlots = useMemo(() => selectedDayByAdvisor.map(({ advisor, tasks: advisorTasks, slots }) => {
-    const busyRanges = advisorTasks
-      .filter((task) => task.dueDate)
-      .map((task) => {
-        const dueDate = new Date(task.dueDate as string)
-        const startMinutes = dueDate.getHours() * 60 + dueDate.getMinutes()
-        return { startMinutes, endMinutes: startMinutes + 45 }
-      })
-
-    const starts = slots.flatMap((slot) => {
-      const candidates: number[] = []
-      for (let minutes = slot.startMinutes; minutes + slotFinderDuration <= slot.endMinutes; minutes += 30) {
-        const hasConflict = busyRanges.some((busy) => minutes < busy.endMinutes && minutes + slotFinderDuration > busy.startMinutes)
-        if (!hasConflict) candidates.push(minutes)
-      }
-      return candidates
-    })
-
-    return { advisor, starts: starts.slice(0, 4) }
-  }).filter((item) => item.starts.length > 0), [selectedDayByAdvisor, slotFinderDuration])
-
   const recommendedPriority = useMemo(() => filteredTasks
     .filter((task) => task.dueDate && (task.status === "OVERDUE" || ["URGENT", "HIGH"].includes(task.priority)))
     .sort((a, b) => {
@@ -713,7 +476,7 @@ export function AdvisorCalendarPage() {
     setIsLoading(true)
     setNotice(null)
     try {
-      const [tasksResponse, calendarEventsResponse, availabilityResponse, clientsResponse, advisorsResponse, profileResponse, meetingTypesResponse, exceptionsResponse, permissionsResponse] = await Promise.all([
+      const [tasksResponse, calendarEventsResponse, availabilityResponse, clientsResponse, advisorsResponse, profileResponse, meetingTypesResponse, exceptionsResponse, permissionsResponse, advisorProfileResponse] = await Promise.all([
         fetch("/api/calendar/intelligence?range=90", { cache: "no-store" }),
         fetch("/api/calendar/events", { cache: "no-store" }),
         fetch("/api/calendar/availability", { cache: "no-store" }),
@@ -723,8 +486,9 @@ export function AdvisorCalendarPage() {
         fetch("/api/calendar/meeting-types", { cache: "no-store" }),
         fetch("/api/calendar/exceptions", { cache: "no-store" }),
         fetch("/api/calendar/permissions", { cache: "no-store" }),
+        fetch("/api/calendar/advisor-profile", { cache: "no-store" }),
       ])
-      const [nextTasks, nextCalendarEvents, nextAvailability, nextClients, nextAdvisors, nextProfile, nextMeetingTypes, nextExceptions, nextPermissions] = await Promise.all([
+      const [nextTasks, nextCalendarEvents, nextAvailability, nextClients, nextAdvisors, nextProfile, nextMeetingTypes, nextExceptions, nextPermissions, nextAdvisorProfile] = await Promise.all([
         readApiData<CalendarTask[]>(tasksResponse),
         readApiData<CalendarEventRecord[]>(calendarEventsResponse),
         readApiData<AvailabilitySlot[]>(availabilityResponse),
@@ -734,6 +498,7 @@ export function AdvisorCalendarPage() {
         readApiData<MeetingTypeOption[]>(meetingTypesResponse),
         readApiData<AvailabilityExceptionOption[]>(exceptionsResponse),
         readApiData<CalendarPermissionOption[]>(permissionsResponse),
+        readApiData<AdvisorProfileOption>(advisorProfileResponse),
       ])
       setTasks([
         ...nextTasks.filter((task) => task.dueDate),
@@ -745,7 +510,13 @@ export function AdvisorCalendarPage() {
       setMeetingTypes(nextMeetingTypes)
       setAvailabilityExceptions(nextExceptions)
       setCalendarPermissions(nextPermissions)
+      setAdvisorProfile(nextAdvisorProfile)
       setCurrentUser(nextProfile)
+      setPublicSlug(nextAdvisorProfile.publicSlug)
+      setPublicName(nextAdvisorProfile.publicName)
+      setPublicDescription(nextAdvisorProfile.publicDescription ?? "")
+      setBookingEnabled(nextAdvisorProfile.bookingEnabled)
+      setPublicTimezone(nextAdvisorProfile.timezone)
       setEventClientId((current) => current || nextClients[0]?.id || "")
       setEventAdvisorId((current) => current || nextAdvisors[0]?.id || "")
       setPermissionTargetUserId((current) => current || nextAdvisors.find((advisor) => advisor.id !== nextProfile.id)?.id || "")
@@ -757,17 +528,14 @@ export function AdvisorCalendarPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadCalendar()
   }, [loadCalendar])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isEventDialogOpen) setEventDate(dateInputValue(selectedDay))
   }, [isEventDialogOpen, selectedDay])
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 60_000)
-    return () => window.clearInterval(interval)
-  }, [])
 
   function openCreateEventDialog(day: Date, startMinutes: number, advisorId?: string) {
     setEditingTaskId(null)
@@ -944,6 +712,36 @@ export function AdvisorCalendarPage() {
     }
   }
 
+  async function saveAdvisorProfile() {
+    setIsSaving(true)
+    setNotice(null)
+    try {
+      const response = await fetch("/api/calendar/advisor-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicSlug,
+          publicName,
+          publicDescription,
+          bookingEnabled,
+          timezone: publicTimezone,
+        }),
+      })
+      const saved = await readApiData<AdvisorProfileOption>(response)
+      setAdvisorProfile(saved)
+      setPublicSlug(saved.publicSlug)
+      setPublicName(saved.publicName)
+      setPublicDescription(saved.publicDescription ?? "")
+      setBookingEnabled(saved.bookingEnabled)
+      setPublicTimezone(saved.timezone)
+      setNotice("Profil public sauvegardé.")
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Impossible de sauvegarder le profil public.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function calendarEventPayload(startAt: Date, endAt: Date) {
     return {
       title: eventTitle.trim(),
@@ -1098,58 +896,15 @@ export function AdvisorCalendarPage() {
     await createCalendarEvent()
   }
 
-  async function completeCalendarTask(task: CalendarTask) {
-    setCompletingTaskId(task.id)
-    setNotice(null)
-    try {
-      const response = await fetch(`/api/tasks/${task.id}/complete`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outcome: "Terminé depuis le calendrier." }),
-      })
-      const updated = await readApiData<CalendarTask>(response)
-      setTasks((current) => current.map((item) => item.id === updated.id ? updated : item))
-      setNotice("Action marquée comme terminée.")
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Impossible de terminer cette action.")
-    } finally {
-      setCompletingTaskId(null)
-    }
-  }
-
-  async function rescheduleCalendarTask(task: CalendarTask) {
-    const currentDate = task.dueDate ? new Date(task.dueDate) : selectedDay
-    const nextDate = addDays(currentDate, 1)
-    setReschedulingTaskId(task.id)
-    setNotice(null)
-    try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dueDate: nextDate.toISOString(),
-          startDate: nextDate.toISOString(),
-          status: "TODO",
-        }),
-      })
-      const updated = await readApiData<CalendarTask>(response)
-      setTasks((current) => current.map((item) => item.id === updated.id ? updated : item))
-      setNotice(`Action reportée au ${formatLongDay(nextDate)} à ${formatTime(nextDate)}.`)
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Impossible de reporter cette action.")
-    } finally {
-      setReschedulingTaskId(null)
-    }
-  }
-
   async function copyPublicBookingLink() {
     const advisorId = currentUser?.id ?? eventAdvisorId
+    const advisor = advisors.find((item) => item.id === advisorId)
     if (!advisorId) {
       setNotice("Aucun conseiller disponible pour générer le lien.")
       return
     }
     const origin = window.location.origin
-    const url = `${origin}/rendez-vous/${advisorId}`
+    const url = `${origin}/rendez-vous/${advisor?.advisorProfile?.publicSlug ?? advisorId}`
     setIsCopyingLink(true)
     setNotice(null)
     try {
@@ -1611,6 +1366,51 @@ export function AdvisorCalendarPage() {
                 Les créneaux Google / Outlook connectés sont lus comme indisponibles dans la réservation publique.
               </p>
             </div>
+
+            <section className="mt-5 rounded-[1.25rem] border-2 border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Profil public</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">Ce profil contrôle le lien de réservation public et son activation.</p>
+                </div>
+                {advisorProfile ? (
+                  <a className="text-xs font-black text-emerald-700 underline" href={`/rendez-vous/${advisorProfile.publicSlug}`} target="_blank" rel="noreferrer">
+                    Ouvrir la page publique
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-black uppercase text-slate-500">Lien public</span>
+                  <Input value={publicSlug} onChange={(event) => setPublicSlug(event.target.value)} placeholder="marie-dupont" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-black uppercase text-slate-500">Nom affiché</span>
+                  <Input value={publicName} onChange={(event) => setPublicName(event.target.value)} placeholder="Marie Dupont" />
+                </label>
+                <label className="block lg:col-span-2">
+                  <span className="mb-1 block text-[11px] font-black uppercase text-slate-500">Description publique</span>
+                  <textarea value={publicDescription} onChange={(event) => setPublicDescription(event.target.value)} className="min-h-20 w-full rounded-2xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-emerald-300" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-black uppercase text-slate-500">Fuseau par défaut</span>
+                  <select value={publicTimezone} onChange={(event) => setPublicTimezone(event.target.value)} className="h-11 w-full rounded-2xl border-2 border-slate-200 px-3 text-sm font-black">
+                    <option value="America/Toronto">America/Toronto</option>
+                    <option value="America/Montreal">America/Montreal</option>
+                    <option value="Europe/Paris">Europe/Paris</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border-2 border-slate-200 px-3 py-2 text-sm font-black">
+                  <input type="checkbox" checked={bookingEnabled} onChange={(event) => setBookingEnabled(event.target.checked)} className="size-4" />
+                  Réservation publique activée
+                </label>
+              </div>
+              <Button type="button" className="mt-3" variant="outline" onClick={() => void saveAdvisorProfile()} disabled={isSaving}>
+                <Save className="size-4" />
+                Sauvegarder le profil public
+              </Button>
+            </section>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
               <label className="block">

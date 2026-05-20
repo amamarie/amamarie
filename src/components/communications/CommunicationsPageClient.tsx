@@ -608,10 +608,11 @@ function formatCommunicationDate(value?: string | null) {
   return new Intl.DateTimeFormat("fr-CA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
 }
 
-function channelIcon(channel: ConversationEvent["channel"]) {
-  if (channel === "EMAIL") return Mail
-  if (channel === "CALL") return PhoneCall
-  return MessageSquare
+function renderChannelIcon(channel: ConversationEvent["channel"] | undefined, className: string) {
+  if (channel === "EMAIL") return <Mail className={className} />
+  if (channel === "CALL") return <PhoneCall className={className} />
+  if (channel === "SMS") return <MessageSquare className={className} />
+  return <Inbox className={className} />
 }
 
 function CommunicationHero({
@@ -735,7 +736,6 @@ function ConversationButton({
   onToggleSelected: () => void
 }) {
   const latest = conversation.events[0]
-  const Icon = latest ? channelIcon(latest.channel) : Inbox
   return (
     <div
       className={
@@ -758,7 +758,7 @@ function ConversationButton({
       <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
         <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-slate-50 text-emerald-700 shadow-sm">
-          <Icon className="size-4" />
+          {renderChannelIcon(latest?.channel, "size-4")}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center justify-between gap-2">
@@ -835,7 +835,6 @@ function ConversationThread({
       <div className="flex-1 bg-slate-50/60 p-4">
         <div className="grid gap-3">
           {events.map((event) => {
-            const Icon = channelIcon(event.channel)
             const outbound = event.direction === "OUTBOUND"
             return (
               <article
@@ -849,7 +848,7 @@ function ConversationThread({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-2">
                     <span className="grid size-8 shrink-0 place-items-center rounded-2xl bg-white text-emerald-700 shadow-sm">
-                      <Icon className="size-4" />
+                      {renderChannelIcon(event.channel, "size-4")}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-950">{event.title}</p>

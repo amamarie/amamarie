@@ -1,4 +1,5 @@
 import { getExternalCalendarBusyRanges } from "@/lib/calendar/external"
+import { ensureAdvisorProfile, resolvePublicAdvisor } from "@/lib/calendar/public-advisors"
 import { defaultMeetingTypes } from "@/lib/calendar/types"
 import { prisma } from "@/lib/prisma"
 
@@ -36,6 +37,11 @@ export type PublicCalendarData = {
     email: string
     title?: string | null
     phone?: string | null
+    avatarUrl?: string | null
+    publicSlug: string
+    publicDescription?: string | null
+    bookingEnabled: boolean
+    timezone: string
     organization?: { name: string } | null
   }
   slots: AvailabilitySlot[]
@@ -65,19 +71,9 @@ function normalizeQuestionnaire(value: unknown): PublicQuestion[] | null {
 }
 
 export async function getPublicCalendarData(advisorId: string): Promise<PublicCalendarData | null> {
-  const advisor = await prisma.user.findUnique({
-    where: { id: advisorId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      title: true,
-      phone: true,
-      organizationId: true,
-      organization: { select: { name: true } },
-    },
-  })
+  const advisor = await resolvePublicAdvisor(advisorId)
   if (!advisor) return null
+  const advisorProfile = await ensureAdvisorProfile(advisor)
 
   const slots = await prisma.advisorAvailabilitySlot.findMany({
     where: { advisorId, organizationId: advisor.organizationId, isActive: true },
@@ -175,10 +171,15 @@ export async function getPublicCalendarData(advisorId: string): Promise<PublicCa
   return {
     advisor: {
       id: advisor.id,
-      name: advisor.name,
+      name: advisorProfile.publicName,
       email: advisor.email,
       title: advisor.title,
       phone: advisor.phone,
+      avatarUrl: advisorProfile.avatarUrl ?? advisor.avatarUrl,
+      publicSlug: advisorProfile.publicSlug,
+      publicDescription: advisorProfile.publicDescription,
+      bookingEnabled: advisorProfile.bookingEnabled,
+      timezone: advisorProfile.timezone,
       organization: advisor.organization,
     },
     slots,

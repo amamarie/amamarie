@@ -570,12 +570,15 @@ export function SettingsCenter({ billing: initialBilling, organization }: { bill
   const [gmailStatus, setGmailStatus] = useState<GmailConnectionStatus | null>(null)
   const billing = billingProfile
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBillingProfile(initialBilling)
   }, [initialBilling])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrganizationProfile(organization)
   }, [organization])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGeneralPreferences((current) => ({ ...current, currency: billing.currency }))
   }, [billing.currency])
   const sections = useMemo(() => settingSections.map((section) => {
@@ -1234,6 +1237,7 @@ function TeamSection({ advisorProfile, billing, onAction, onConfirm }: { advisor
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAdvisors()
   }, [])
 

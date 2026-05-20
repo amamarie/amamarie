@@ -23,6 +23,15 @@ export default async function CabinetBookingPage({ params }: { params: Promise<{
           name: true,
           title: true,
           email: true,
+          advisorProfile: {
+            select: {
+              publicSlug: true,
+              publicName: true,
+              publicDescription: true,
+              bookingEnabled: true,
+              avatarUrl: true,
+            },
+          },
           availabilitySlots: {
             where: { isActive: true },
             select: { id: true, dayOfWeek: true, startMinutes: true, endMinutes: true, label: true },
@@ -59,10 +68,14 @@ export default async function CabinetBookingPage({ params }: { params: Promise<{
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {organization.users.map((advisor) => {
-            const hasSlots = advisor.availabilitySlots.length > 0
+        {organization.users.map((advisor) => {
+          const hasSlots = advisor.availabilitySlots.length > 0
+          const profile = advisor.advisorProfile
+          const publicName = profile?.publicName ?? advisor.name
+          const publicHref = `/rendez-vous/${profile?.publicSlug ?? advisor.id}#creneaux`
+          const bookingEnabled = profile?.bookingEnabled ?? true
 
-            return (
+          return (
               <div
                 key={advisor.id}
                 className="rounded-[1.5rem] border-2 border-slate-200 bg-slate-50 p-5 shadow-[0_6px_0_#e2e8f0]"
@@ -72,8 +85,8 @@ export default async function CabinetBookingPage({ params }: { params: Promise<{
                     <UserRoundCheck className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-black text-slate-950">{advisor.name}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-600">{advisor.title ?? advisor.email}</p>
+                    <p className="font-black text-slate-950">{publicName}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-600">{profile?.publicDescription ?? advisor.title ?? advisor.email}</p>
                     <p className={`mt-3 text-xs font-black uppercase tracking-[0.12em] ${hasSlots ? "text-emerald-700" : "text-amber-700"}`}>
                       {hasSlots ? `${advisor.availabilitySlots.length} plage(s) publiée(s)` : "Aucune plage publiée"}
                     </p>
@@ -94,10 +107,11 @@ export default async function CabinetBookingPage({ params }: { params: Promise<{
                       </p>
                     )}
                     <Link
-                      href={`/rendez-vous/${advisor.id}#creneaux`}
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-[0_4px_0_#16a34a] transition hover:-translate-y-0.5"
+                      href={publicHref}
+                      aria-disabled={!bookingEnabled}
+                      className={`mt-4 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-black shadow-[0_4px_0_#16a34a] transition hover:-translate-y-0.5 ${bookingEnabled ? "bg-emerald-600 text-white" : "pointer-events-none bg-slate-300 text-slate-600"}`}
                     >
-                      {hasSlots ? "Voir les créneaux disponibles" : "Ouvrir la demande de rendez-vous"}
+                      {!bookingEnabled ? "Réservation désactivée" : hasSlots ? "Voir les créneaux disponibles" : "Ouvrir la demande de rendez-vous"}
                     </Link>
                   </div>
                 </div>

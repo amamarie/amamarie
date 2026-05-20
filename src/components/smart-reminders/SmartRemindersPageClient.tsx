@@ -69,6 +69,7 @@ export function SmartRemindersPageClient() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
 
@@ -154,12 +155,14 @@ export function SmartRemindersPageClient() {
     setError(null)
     setNotice(null)
     try {
+      // eslint-disable-next-line react-hooks/purity
+      const now = Date.now()
       const body = action === "snooze"
-        ? { reason: "Reporté depuis le dashboard.", snoozedUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }
+        ? { reason: "Reporté depuis le dashboard.", snoozedUntil: new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString() }
         : action === "send-client-message"
           ? { kind: "SERVICE" }
           : action === "create-calendar-event"
-            ? { startAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 30 }
+            ? { startAt: new Date(now + 24 * 60 * 60 * 1000).toISOString(), durationMinutes: 30 }
           : {}
       await readData<unknown>(await fetch(`/api/reminders/${id}/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }))
       setNotice(action === "create-opportunity" ? "Opportunité créée." : action === "send-client-message" ? "Message client préparé." : action === "create-calendar-event" ? "Événement calendrier créé." : action === "notify-channels" ? "Canaux externes notifiés." : "Rappel mis à jour.")

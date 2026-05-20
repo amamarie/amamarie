@@ -895,6 +895,7 @@ model Organization {
   bookingHolds                    BookingHold[]
   calendarPermissions             CalendarPermission[]
   externalCalendarConnections     ExternalCalendarConnection[]
+  advisorProfiles                 AdvisorProfile[]
   automationRules                 AutomationRule[]
   automationRuns                  AutomationRun[]
   productRecommendations          ProductRecommendation[]
@@ -1949,6 +1950,7 @@ model User {
   smsMessages                       SMSMessage[]
   twilioCallerIds                   AdvisorTwilioCallerId[]
   voiceAutomationSettings           AdvisorVoiceAutomationSettings?
+  advisorProfile                    AdvisorProfile?
   productRecommendations            ProductRecommendation[]
   recommendationOptions             RecommendationOption[]
   recommendationRisks               RecommendationRisk[]
@@ -2073,6 +2075,32 @@ model InternalAuthCredential {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AdvisorProfile {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  publicSlug            String
+  publicName            String
+  publicDescription     String?
+  avatarUrl             String?
+  bookingEnabled        Boolean @default(true)
+  defaultMeetingLocation String  @default("VIDEO")
+  timezone              String  @default("America/Toronto")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, publicSlug])
+  @@unique([publicSlug])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([bookingEnabled])
 }
 
 model AdvisorAvailabilitySlot {

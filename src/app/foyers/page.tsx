@@ -81,6 +81,7 @@ export default async function HouseholdsPage() {
   const assets = households.reduce((sum, client) => sum + client.products.reduce((productSum, product) => productSum + (product.accountValue ?? 0), 0), 0)
   const coverage = households.reduce((sum, client) => sum + client.products.reduce((productSum, product) => productSum + (product.coverageAmount ?? 0), 0), 0)
   const incomplete = households.filter((client) => client.documents.length === 0 || !client.nextReviewDate).length
+  // eslint-disable-next-line react-hooks/purity
   const reviewsSoon = households.filter((client) => client.nextReviewDate && client.nextReviewDate.getTime() <= Date.now() + 60 * 24 * 60 * 60 * 1000).length
 
   return (

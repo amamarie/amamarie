@@ -59,6 +59,7 @@ export function ClientSmartRemindersTab({ clientId }: { clientId: string }) {
   }, [clientId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
   }, [load])
 

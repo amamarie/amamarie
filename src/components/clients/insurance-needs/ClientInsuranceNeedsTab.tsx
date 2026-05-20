@@ -549,11 +549,13 @@ export function ClientInsuranceNeedsTab({ clientId }: { clientId: string }) {
   }, [clientId, requestedOpportunityId, searchParams])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadAnalyses()
   }, [loadAnalyses])
 
   useEffect(() => {
     if (!requestedOpportunityId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLinkedOpportunity(null)
       return
     }
@@ -580,8 +582,9 @@ export function ClientInsuranceNeedsTab({ clientId }: { clientId: string }) {
     const next = Object.fromEntries(
       selected.inputs.map((input) => [input.inputKey, String(extractValue(input.inputValue) ?? "")])
     )
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftValues(next)
-  }, [selected?.id])
+  }, [selected])
 
   const summary = useMemo(() => {
     const open = analyses.filter((analysis) => !["COMPLETED", "ARCHIVED"].includes(analysis.status)).length

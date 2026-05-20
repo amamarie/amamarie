@@ -1,7 +1,7 @@
 "use client"
 
 import { CalendarDays, CheckCircle2, Clock3, Loader2, Mail, ShieldCheck } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,6 +36,10 @@ function minutesLabel(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
 }
 
+function minutesSinceMidnight(date: Date) {
+  return date.getHours() * 60 + date.getMinutes()
+}
+
 function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
@@ -66,10 +70,6 @@ function firstDateWithPublishedSlot(slots: AvailabilitySlot[], service?: Booking
   return Array.from({ length: 14 }, (_, index) => addDays(start, index)).find((date) =>
     slots.some((slot) => slot.dayOfWeek === date.getDay() && slot.endMinutes - slot.startMinutes >= minimumDuration)
   )
-}
-
-function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
-  return aStart < bEnd && aEnd > bStart
 }
 
 async function readApiData<T>(response: Response) {
@@ -114,6 +114,10 @@ type BookingResponse = {
   }
 }
 
+type AvailabilityResponse = {
+  slots: Array<{ start: string; end: string }>
+}
+
 export function PublicBookingPage({
   advisorId,
   initialData = null,
@@ -130,7 +134,9 @@ export function PublicBookingPage({
   const [selectedDate, setSelectedDate] = useState(() => firstSelectedDate)
   const [selectedTime, setSelectedTime] = useState<string>(() => parseTimeParam(initialTime))
   const [holdId, setHoldId] = useState<string>("")
-  const [timezone] = useState("America/Toronto")
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || initialData?.advisor.timezone || "America/Toronto")
+  const [availableSlots, setAvailableSlots] = useState<AvailabilityResponse["slots"]>([])
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [bookingMode, setBookingMode] = useState<"ADVISOR" | "CLIENT">(() => resolveInitialBookingMode(initialData))
   const [proposalDate, setProposalDate] = useState(() => new Date())
   const [proposalTime, setProposalTime] = useState("09:00")
@@ -180,47 +186,48 @@ export function PublicBookingPage({
     const suffix = query.toString()
     return `/rendez-vous/${advisorId}${suffix ? `?${suffix}` : ""}#creneaux`
   }
-  const hasPublishedSlotForDate = (date: Date) => Boolean(data?.slots.some((slot) =>
+  const hasPublishedSlotForDate = useCallback((date: Date) => Boolean(data?.slots.some((slot) =>
     slot.dayOfWeek === date.getDay() && (!selectedService || slot.endMinutes - slot.startMinutes >= selectedService.durationMinutes)
-  ))
+  )), [data?.slots, selectedService])
   const availableBookingDays = useMemo(
     () => nextDays.filter((day) => hasPublishedSlotForDate(day)),
-    [nextDays, data?.slots, selectedService],
+    [nextDays, hasPublishedSlotForDate],
   )
-  const daySlots = useMemo(() => {
-    if (!data || !selectedService) return []
-    const minimumNoticeMs = (selectedService.minimumNoticeHours ?? 24) * 60 * 60 * 1000
-    const minimumStartTime = new Date().getTime() + minimumNoticeMs
-    const bufferAfterMs = (selectedService.bufferAfterMinutes ?? 15) * 60 * 1000
-    const slotStep = selectedService.slotStepMinutes ?? 30
-    const bookedRanges = (data.bookedRanges?.length ? data.bookedRanges : (data.bookedStarts ?? []).map((start) => {
-      const startDate = new Date(start)
-      return { start: startDate.toISOString(), end: new Date(startDate.getTime() + 60 * 60 * 1000).toISOString() }
-    })).map((range) => ({
-      start: new Date(range.start),
-      end: new Date(new Date(range.end).getTime() + bufferAfterMs),
-    }))
-    const exceptionRanges = (data.exceptions ?? []).flatMap((exception) => {
-      const exceptionDate = new Date(exception.date)
-      if (exceptionDate.getFullYear() !== selectedDate.getFullYear() || exceptionDate.getMonth() !== selectedDate.getMonth() || exceptionDate.getDate() !== selectedDate.getDate()) return []
-      const start = setTime(selectedDate, exception.startMinutes ?? 0)
-      const end = setTime(selectedDate, exception.endMinutes ?? 24 * 60)
-      return [{ start, end }]
+  useEffect(() => {
+    if (!data || !selectedService || bookingMode !== "ADVISOR") return
+    const controller = new AbortController()
+    const query = new URLSearchParams({
+      date: dateParam(selectedDate),
+      meetingTypeId: selectedService.id,
+      timezone,
     })
-
-    return data.slots
-      .filter((slot) => slot.dayOfWeek === selectedDate.getDay() && slot.endMinutes - slot.startMinutes >= selectedService.durationMinutes)
-      .flatMap((slot) => {
-        const times: number[] = []
-        for (let minutes = slot.startMinutes; minutes + selectedService.durationMinutes <= slot.endMinutes; minutes += slotStep) {
-          const candidate = setTime(selectedDate, minutes)
-          const candidateEnd = new Date(candidate.getTime() + selectedService.durationMinutes * 60 * 1000)
-          const hasConflict = [...bookedRanges, ...exceptionRanges].some((range) => overlaps(candidate, candidateEnd, range.start, range.end))
-          if (candidate.getTime() > minimumStartTime && !hasConflict) times.push(minutes)
-        }
-        return times
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoadingSlots(true)
+    fetch(`/api/public/advisors/${data.advisor.publicSlug ?? advisorId}/availability?${query.toString()}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => readApiData<AvailabilityResponse>(response))
+      .then((next) => {
+        setAvailableSlots(next.slots)
+        setSelectedTime((current) => {
+          if (!current) return current
+          const stillAvailable = next.slots.some((slot) => minutesSinceMidnight(new Date(slot.start)) === Number(current))
+          return stillAvailable ? current : ""
+        })
       })
-  }, [data, selectedDate, selectedService])
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") {
+          setAvailableSlots([])
+          setNotice(error instanceof Error ? error.message : "Créneaux indisponibles.")
+        }
+      })
+      .finally(() => setIsLoadingSlots(false))
+
+    return () => controller.abort()
+  }, [advisorId, bookingMode, data, selectedDate, selectedService, timezone])
+
+  const daySlots = useMemo(() => availableSlots.map((slot) => minutesSinceMidnight(new Date(slot.start))), [availableSlots])
   const slotGroups = useMemo(() => [
     { label: "Matin", slots: daySlots.filter((minutes) => minutes < 12 * 60) },
     { label: "Après-midi", slots: daySlots.filter((minutes) => minutes >= 12 * 60 && minutes < 17 * 60) },
@@ -562,7 +569,7 @@ export function PublicBookingPage({
                 <div className="mt-3 space-y-4">
                   {slotGroups.length === 0 ? (
                     <div className="col-span-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-600">
-                      Aucun créneau disponible cette journée. Vous pouvez choisir une autre date ou proposer vos disponibilités.
+                      {isLoadingSlots ? "Chargement des créneaux..." : "Aucun créneau disponible cette journée. Vous pouvez choisir une autre date ou proposer vos disponibilités."}
                     </div>
                   ) : slotGroups.map((group) => (
                     <div key={group.label}>
@@ -596,7 +603,22 @@ export function PublicBookingPage({
               <h2 className="text-lg font-black text-slate-950">Vos coordonnées</h2>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl border-2 border-slate-200 bg-white p-3 text-xs font-black text-slate-600">
-                  Fuseau horaire affiché : {timezone}
+                  <label className="block">
+                    <span className="mb-1 block uppercase tracking-[0.12em] text-slate-500">Fuseau horaire affiché</span>
+                    <select
+                      value={timezone}
+                      onChange={(event) => {
+                        setTimezone(event.target.value)
+                        setSelectedTime("")
+                        setHoldId("")
+                      }}
+                      className="mt-1 h-10 w-full rounded-xl border-2 border-slate-200 bg-white px-3 text-xs font-black text-slate-700 outline-none focus:border-emerald-300"
+                    >
+                      {[timezone, "America/Toronto", "America/Montreal", "Europe/Paris", "UTC"].filter((item, index, list) => list.indexOf(item) === index).map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {([

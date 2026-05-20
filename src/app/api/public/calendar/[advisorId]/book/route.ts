@@ -2,7 +2,10 @@ import { z } from "zod"
 import crypto from "node:crypto"
 
 import { fail, handleApiError, ok } from "@/lib/api-response"
+import { rangesOverlap } from "@/lib/calendar/availability"
 import { createExternalCalendarEvent, getExternalCalendarBusyRanges } from "@/lib/calendar/external"
+import { resolvePublicAdvisor } from "@/lib/calendar/public-advisors"
+import { getServerAvailableSlots } from "@/lib/calendar/server-availability"
 import { publicCalendarLinks } from "@/lib/calendar/public-calendar-links"
 import { isResendConfigured, sendTransactionalEmail } from "@/lib/email/send"
 import { sendAdvisorGmailEmail } from "@/lib/google/gmail"
@@ -33,7 +36,6 @@ const bookingSchema = z.object({
   path: ["startAt"],
 })
 
-const minimumNoticeHours = 24
 const meetingConflictWindowMinutes = 60
 const bufferAfterMinutes = 15
 
@@ -80,38 +82,108 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
     const { advisorId } = await params
     const payload = bookingSchema.parse(await request.json())
     const origin = new URL(request.url).origin
-    const advisor = await prisma.user.findUnique({
-      where: { id: advisorId },
-      select: { id: true, name: true, email: true, organizationId: true },
-    })
+    const advisor = await resolvePublicAdvisor(advisorId)
     if (!advisor) return fail("NOT_FOUND", "Ce calendrier n’est pas disponible.", 404)
 
     const confirmedStart = payload.startAt ? new Date(payload.startAt) : null
     const meetingType = payload.meetingTypeId ? await prisma.meetingType.findFirst({
-      where: { id: payload.meetingTypeId, organizationId: advisor.organizationId, isPublic: true },
+      where: { id: payload.meetingTypeId, organizationId: advisor.organizationId, isPublic: true, OR: [{ advisorId: advisor.id }, { advisorId: null }] },
     }) : null
+    let confirmedDurationMinutes = meetingType?.durationMinutes ?? payload.durationMinutes
+    let lockedHoldId = payload.holdId ?? null
     if (confirmedStart) {
-      const minimumStart = new Date(Date.now() + minimumNoticeHours * 60 * 60 * 1000)
-      if (confirmedStart < minimumStart) {
-        return fail("SLOT_UNAVAILABLE", `Ce rendez-vous doit être réservé au moins ${minimumNoticeHours} h à l’avance.`, 409)
-      }
+      const availability = await getServerAvailableSlots({
+        organizationId: advisor.organizationId,
+        advisorId: advisor.id,
+        date: confirmedStart,
+        meetingTypeId: payload.meetingTypeId,
+        timezone: payload.timezone,
+      })
+      confirmedDurationMinutes = availability.rules.durationMinutes
+      const end = new Date(confirmedStart.getTime() + confirmedDurationMinutes * 60 * 1000)
+      const slotIsAvailable = availability.slots.some((slot) => {
+        const slotStart = new Date(slot.start)
+        const slotEnd = new Date(slot.end)
+        return slotStart.getTime() === confirmedStart.getTime() && slotEnd.getTime() === end.getTime()
+      })
+      if (!slotIsAvailable && !payload.holdId) return fail("SLOT_UNAVAILABLE", "Ce créneau n’est plus disponible.", 409)
 
-      const end = new Date(confirmedStart.getTime() + payload.durationMinutes * 60 * 1000)
-      if (payload.holdId) {
-        const hold = await prisma.bookingHold.findFirst({
-          where: { id: payload.holdId, organizationId: advisor.organizationId, advisorId, status: "ACTIVE", expiresAt: { gt: new Date() } },
-          select: { startAt: true, endAt: true },
+      lockedHoldId = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${advisor.id}))`
+        await tx.bookingHold.updateMany({
+          where: { organizationId: advisor.organizationId, advisorId: advisor.id, status: "ACTIVE", expiresAt: { lt: new Date() } },
+          data: { status: "EXPIRED" },
         })
-        if (!hold || hold.startAt.getTime() !== confirmedStart.getTime() || hold.endAt.getTime() !== end.getTime()) {
-          return fail("SLOT_UNAVAILABLE", "La réservation temporaire a expiré. Choisissez à nouveau le créneau.", 409)
+
+        if (payload.holdId) {
+          const hold = await tx.bookingHold.findFirst({
+            where: { id: payload.holdId, organizationId: advisor.organizationId, advisorId: advisor.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
+            select: { id: true, startAt: true, endAt: true },
+          })
+          if (!hold || hold.startAt.getTime() !== confirmedStart.getTime() || hold.endAt.getTime() !== end.getTime()) return null
         }
-      }
+
+        const [events, bookings, holds] = await Promise.all([
+          tx.calendarEvent.findMany({
+            where: {
+              organizationId: advisor.organizationId,
+              advisorId: advisor.id,
+              status: { notIn: ["CANCELLED", "ARCHIVED"] },
+              startAt: { lt: end },
+              endAt: { gt: confirmedStart },
+            },
+            select: { startAt: true, endAt: true },
+          }),
+          tx.booking.findMany({
+            where: {
+              organizationId: advisor.organizationId,
+              advisorId: advisor.id,
+              status: { notIn: ["CANCELLED", "ARCHIVED"] },
+              startAt: { lt: end },
+              endAt: { gt: confirmedStart },
+            },
+            select: { startAt: true, endAt: true },
+          }),
+          tx.bookingHold.findMany({
+            where: {
+              organizationId: advisor.organizationId,
+              advisorId: advisor.id,
+              id: payload.holdId ? { not: payload.holdId } : undefined,
+              status: "ACTIVE",
+              expiresAt: { gt: new Date() },
+              startAt: { lt: end },
+              endAt: { gt: confirmedStart },
+            },
+            select: { startAt: true, endAt: true },
+          }),
+        ])
+
+        const busy = [...events, ...bookings, ...holds]
+        if (busy.some((range) => rangesOverlap(confirmedStart, end, range.startAt, range.endAt))) return null
+        if (payload.holdId) return payload.holdId
+
+        const hold = await tx.bookingHold.create({
+          data: {
+            organizationId: advisor.organizationId,
+            advisorId: advisor.id,
+            meetingTypeId: meetingType?.id ?? null,
+            startAt: confirmedStart,
+            endAt: end,
+            timezone: payload.timezone,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            clientEmail: payload.email,
+          },
+          select: { id: true },
+        })
+        return hold.id
+      })
+      if (!lockedHoldId) return fail("SLOT_UNAVAILABLE", "La réservation temporaire a expiré ou ce créneau vient d’être réservé.", 409)
       const dayOfWeek = confirmedStart.getDay()
       const startMinutes = minutesSinceMidnight(confirmedStart)
       const endMinutes = minutesSinceMidnight(end)
 
       const slots = await prisma.advisorAvailabilitySlot.findMany({
-        where: { advisorId, organizationId: advisor.organizationId, isActive: true },
+        where: { advisorId: advisor.id, organizationId: advisor.organizationId, isActive: true },
       })
       const isInsideAvailability = slots.some((slot) => (
         slot.dayOfWeek === dayOfWeek &&
@@ -137,7 +209,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
         prisma.calendarEvent.findFirst({
           where: {
             organizationId: advisor.organizationId,
-            advisorId,
+            advisorId: advisor.id,
             status: { notIn: ["CANCELLED", "ARCHIVED"] },
             startAt: { lt: end },
             endAt: { gt: confirmedStart },
@@ -147,7 +219,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
         prisma.booking.findFirst({
           where: {
             organizationId: advisor.organizationId,
-            advisorId,
+            advisorId: advisor.id,
             status: { notIn: ["CANCELLED", "ARCHIVED"] },
             startAt: { lt: end },
             endAt: { gt: confirmedStart },
@@ -157,8 +229,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
         prisma.bookingHold.findFirst({
           where: {
             organizationId: advisor.organizationId,
-            advisorId,
-            id: payload.holdId ? { not: payload.holdId } : undefined,
+            advisorId: advisor.id,
+            id: lockedHoldId ? { not: lockedHoldId } : undefined,
             status: "ACTIVE",
             expiresAt: { gt: new Date() },
             startAt: { lt: end },
@@ -166,7 +238,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
           },
           select: { id: true },
         }),
-        getExternalCalendarBusyRanges({ organizationId: advisor.organizationId, advisorId, start: confirmedStart, end, timezone: payload.timezone }),
+        getExternalCalendarBusyRanges({ organizationId: advisor.organizationId, advisorId: advisor.id, start: confirmedStart, end, timezone: payload.timezone }),
       ])
       if (conflictingEvent || conflictingBooking || conflictingHold || externalBusy.some((range) => confirmedStart < range.end && end > range.start)) {
         return fail("SLOT_UNAVAILABLE", "Ce créneau vient d’être réservé. Choisissez une autre heure.", 409)
@@ -225,7 +297,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
 
     const cancellationToken = crypto.randomBytes(24).toString("hex")
     const rescheduleToken = crypto.randomBytes(24).toString("hex")
-    const confirmedEnd = confirmedStart ? new Date(confirmedStart.getTime() + payload.durationMinutes * 60 * 1000) : null
+    const confirmedEnd = confirmedStart ? new Date(confirmedStart.getTime() + confirmedDurationMinutes * 60 * 1000) : null
     const attendeeEmail = payload.email
     const external = confirmedStart && confirmedEnd ? await createExternalCalendarEvent({
       organizationId: advisor.organizationId,
@@ -292,7 +364,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
           `Mode souhaité: ${payload.meetingMode === "PHONE" ? "Téléphone" : payload.meetingMode === "IN_PERSON" ? "Présentiel" : "Visio"}`,
           confirmedStart ? `Début demandé: ${confirmedStart.toISOString()}` : null,
           payload.proposedSlots.length ? `Disponibilités proposées:\n${payload.proposedSlots.map((slot, index) => `${index + 1}. ${new Date(slot).toISOString()}`).join("\n")}` : null,
-          `Durée: ${payload.durationMinutes} minutes`,
+          `Durée: ${confirmedDurationMinutes} minutes`,
           existingClient ? `Client lié: ${fullName(existingClient)}` : lead ? `Prospect lié: ${fullName(lead)}` : "Client lié: à vérifier",
           payload.message ? `Message: ${payload.message}` : null,
         ].filter(Boolean).join("\n"),
@@ -330,9 +402,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
       },
     }) : null
 
-    if (payload.holdId) {
+    if (lockedHoldId) {
       await prisma.bookingHold.updateMany({
-        where: { id: payload.holdId, organizationId: advisor.organizationId, advisorId },
+        where: { id: lockedHoldId, organizationId: advisor.organizationId, advisorId: advisor.id },
         data: { status: "CONVERTED" },
       })
     }

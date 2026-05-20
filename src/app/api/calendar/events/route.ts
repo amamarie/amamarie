@@ -49,8 +49,23 @@ export async function GET(request: Request) {
 
     const permissions = await prisma.calendarPermission.findMany({ where: { organizationId, viewerUserId: userId } })
     const visible = events.map((event) => {
-      const canViewDetails = event.advisorId === userId || permissions.some((permission) => permission.targetUserId === event.advisorId && ["VIEW_DETAILS", "EDIT_EVENTS", "ADMIN"].includes(permission.permissionLevel))
-      return canViewDetails ? event : { ...event, title: "Occupé", description: null, clientId: null, leadId: null, visibility: "FREE_BUSY_ONLY" }
+      const permissionLevel = event.advisorId === userId
+        ? "ADMIN"
+        : permissions.find((permission) => permission.targetUserId === event.advisorId)?.permissionLevel
+      const canViewDetails = ["VIEW_DETAILS", "EDIT_EVENTS", "ADMIN"].includes(permissionLevel ?? "")
+      const canViewLimited = permissionLevel === "LIMITED_DETAILS"
+      if (canViewDetails) return event
+      if (canViewLimited) {
+        return {
+          ...event,
+          title: event.type === "MEETING" ? "RDV client" : event.type,
+          description: null,
+          clientId: null,
+          leadId: null,
+          visibility: "LIMITED_DETAILS",
+        }
+      }
+      return { ...event, title: "Occupé", description: null, clientId: null, leadId: null, visibility: "FREE_BUSY_ONLY" }
     })
 
     return ok(visible)
