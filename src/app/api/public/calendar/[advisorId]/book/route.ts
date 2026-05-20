@@ -4,6 +4,7 @@ import crypto from "node:crypto"
 import { fail, handleApiError, ok } from "@/lib/api-response"
 import { rangesOverlap } from "@/lib/calendar/availability"
 import { createExternalCalendarEvent, getExternalCalendarBusyRanges } from "@/lib/calendar/external"
+import { runPostBookingWorkflow } from "@/lib/calendar/post-booking-workflows"
 import { resolvePublicAdvisor } from "@/lib/calendar/public-advisors"
 import { getServerAvailableSlots } from "@/lib/calendar/server-availability"
 import { publicCalendarLinks } from "@/lib/calendar/public-calendar-links"
@@ -409,6 +410,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
       })
     }
 
+    const postBookingWorkflow = booking ? await runPostBookingWorkflow({
+      organizationId: advisor.organizationId,
+      advisorId: advisor.id,
+      bookingId: booking.id,
+      calendarEventId: calendarEvent?.id,
+      taskId: task.id,
+      clientId: existingClient?.id,
+      leadId: existingClient ? null : lead?.id,
+      service: payload.service,
+      startAt: confirmedStart,
+      endAt: confirmedEnd,
+      clientName: payload.name,
+      questionnaireAnswers: payload.questionnaireAnswers,
+    }) : null
+
     const marketingConversion = await markMarketingBookingConversion({
       marketingToken: payload.marketingToken,
       bookingId: booking?.id,
@@ -506,6 +522,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ adv
       bookingId: booking?.id,
       calendarEventId: calendarEvent?.id,
       taskId: task.id,
+      postBookingWorkflow,
       marketingToken: payload.marketingToken ?? null,
       marketingConsent: payload.marketingConsent,
       marketingSequenceEnrollments: sequenceEnrollment?.enrolled ?? 0,

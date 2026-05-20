@@ -147,7 +147,7 @@ export function PublicBookingPage({
   const [meetingMode, setMeetingMode] = useState<"VIDEO" | "PHONE" | "IN_PERSON">("VIDEO")
   const [message, setMessage] = useState("")
   const [marketingConsent, setMarketingConsent] = useState(false)
-  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<Record<string, string>>({})
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<Record<string, string | boolean>>({})
   const [marketingToken] = useState(initialMarketingToken)
   const [notice, setNotice] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(!initialData)
@@ -249,6 +249,11 @@ export function PublicBookingPage({
     }
     if (!phone.trim()) {
       setNotice("Ajoutez un numéro de téléphone pour recevoir la confirmation par SMS.")
+      return
+    }
+    const missingRequiredQuestion = selectedService.questionnaire?.find((question) => question.required && !questionnaireAnswers[question.key])
+    if (missingRequiredQuestion) {
+      setNotice(`Répondez à la question obligatoire : ${missingRequiredQuestion.label}`)
       return
     }
     setIsSaving(true)
@@ -654,18 +659,42 @@ export function PublicBookingPage({
                 </label>
                 {selectedService?.questionnaire?.map((question) => (
                   <label key={question.key} className="block">
-                    <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">{question.label}</span>
-                    {question.type === "select" ? (
+                    {question.type === "checkbox" ? (
+                      <span className="flex items-start gap-3 rounded-2xl border-2 border-slate-200 bg-white p-3 text-sm font-semibold leading-5 text-slate-700 shadow-[0_3px_0_#e2e8f0]">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(questionnaireAnswers[question.key])}
+                          onChange={(event) => setQuestionnaireAnswers((current) => ({ ...current, [question.key]: event.target.checked }))}
+                          className="mt-1 size-4 rounded border-slate-300 text-emerald-600"
+                        />
+                        <span>{question.label}{question.required ? " *" : ""}</span>
+                      </span>
+                    ) : question.type === "select" ? (
+                      <>
+                        <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">{question.label}{question.required ? " *" : ""}</span>
                       <select
                         className="h-11 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-sm font-black shadow-[0_3px_0_#e2e8f0] outline-none focus:border-emerald-300"
-                        value={questionnaireAnswers[question.key] ?? ""}
+                        value={String(questionnaireAnswers[question.key] ?? "")}
                         onChange={(event) => setQuestionnaireAnswers((current) => ({ ...current, [question.key]: event.target.value }))}
                       >
                         <option value="">Choisir</option>
                         {(question.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
                       </select>
+                      </>
+                    ) : question.type === "textarea" ? (
+                      <>
+                        <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">{question.label}{question.required ? " *" : ""}</span>
+                        <textarea
+                          className="min-h-20 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold shadow-[0_3px_0_#e2e8f0] outline-none focus:border-emerald-300"
+                          value={String(questionnaireAnswers[question.key] ?? "")}
+                          onChange={(event) => setQuestionnaireAnswers((current) => ({ ...current, [question.key]: event.target.value }))}
+                        />
+                      </>
                     ) : (
-                      <Input value={questionnaireAnswers[question.key] ?? ""} onChange={(event) => setQuestionnaireAnswers((current) => ({ ...current, [question.key]: event.target.value }))} />
+                      <>
+                        <span className="mb-1 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">{question.label}{question.required ? " *" : ""}</span>
+                        <Input value={String(questionnaireAnswers[question.key] ?? "")} onChange={(event) => setQuestionnaireAnswers((current) => ({ ...current, [question.key]: event.target.value }))} />
+                      </>
                     )}
                   </label>
                 ))}

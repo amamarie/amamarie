@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from "@fullcalendar/interaction"
 import timeGridPlugin from "@fullcalendar/timegrid"
-import { CalendarClock, Copy, ExternalLink, Filter, Loader2, Plus, Save, Search, Trash2 } from "lucide-react"
+import { BarChart3, Bot, CalendarClock, Copy, ExternalLink, Filter, Loader2, Plus, Save, Search, Trash2, UsersRound } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { ContentCard, PageShell, StatusBadge } from "@/components/crm/page-shell"
@@ -133,6 +133,45 @@ type AdvisorProfileOption = {
   timezone: string
 }
 
+type CalendarStats = {
+  totals: {
+    bookings: number
+    confirmed: number
+    cancelled: number
+    cancellationRate: number
+    calendarEvents: number
+    averageLeadTimeHours: number
+  }
+  byAdvisor: Array<{ advisorId: string; advisorName: string; confirmed: number; cancelled: number }>
+}
+
+type BestAdvisorResponse = {
+  selected: {
+    advisorId: string
+    advisorName: string
+    publicSlug: string
+    nextSlot: string | null
+    nextSlotEnd: string | null
+    score: number
+    loadToday: number
+    loadNextSevenDays: number
+  } | null
+  candidates: Array<{
+    advisorId: string
+    advisorName: string
+    publicSlug: string
+    nextSlot: string | null
+    score: number
+    loadToday: number
+    loadNextSevenDays: number
+  }>
+}
+
+type TeamScheduleRow = {
+  advisor: { id: string; name: string; email: string; title?: string | null; publicSlug?: string | null }
+  busy: Array<{ id: string; title: string; start: string; end: string; source: string }>
+}
+
 type CurrentUser = {
   id: string
   name: string
@@ -170,6 +209,12 @@ function startOfMonth(date: Date) {
 function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
+  return next
+}
+
+function setTime(date: Date, minutes: number) {
+  const next = new Date(date)
+  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0)
   return next
 }
 
@@ -289,39 +334,6 @@ function calendarEventToTask(event: CalendarEventRecord, advisors: AdvisorOption
   }
 }
 
-function taskTone(task: CalendarTask) {
-  if (task.status === "OVERDUE" || task.priority === "URGENT") return "border-rose-200 bg-rose-50 text-rose-800"
-  if (task.type === "DOCUMENT" || task.type === "KYC" || task.type === "COMPLIANCE") return "border-amber-200 bg-amber-50 text-amber-800"
-  if (task.type === "CAMPAIGN") return "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800"
-  if (task.type === "ANNUAL_REVIEW" || task.type === "PRODUCT_REVIEW" || task.type === "RENEWAL") return "border-blue-200 bg-blue-50 text-blue-800"
-  if (task.type === "MEETING") return "border-emerald-200 bg-emerald-50 text-emerald-800"
-  if (task.type === "CALL") return "border-sky-200 bg-sky-50 text-sky-800"
-  return "border-slate-200 bg-slate-50 text-slate-800"
-}
-
-function taskTypeLabel(type: CalendarTask["type"]) {
-  const labels: Record<CalendarTask["type"], string> = {
-    CALL: "Appel",
-    SMS: "SMS",
-    EMAIL: "Courriel",
-    MEETING: "RDV",
-    DOCUMENT: "Document",
-    KYC: "Profil",
-    FOLLOW_UP: "Suivi",
-    PRODUCT_REVIEW: "Produit",
-    RENEWAL: "Renouvellement",
-    COMPLIANCE: "Conformité",
-    INTERNAL: "Interne",
-    OTHER: "Autre",
-    CAMPAIGN: "Campagne",
-    BIRTHDAY: "Anniversaire",
-    ANNUAL_REVIEW: "Bilan annuel",
-    OPPORTUNITY: "Opportunité",
-    REMINDER: "Rappel",
-  }
-  return labels[type] ?? type
-}
-
 function eventSearchText(task: CalendarTask) {
   return [
     task.title,
@@ -389,6 +401,9 @@ export function AdvisorCalendarPage() {
   const [availabilityExceptions, setAvailabilityExceptions] = useState<AvailabilityExceptionOption[]>([])
   const [calendarPermissions, setCalendarPermissions] = useState<CalendarPermissionOption[]>([])
   const [advisorProfile, setAdvisorProfile] = useState<AdvisorProfileOption | null>(null)
+  const [calendarStats, setCalendarStats] = useState<CalendarStats | null>(null)
+  const [bestAdvisor, setBestAdvisor] = useState<BestAdvisorResponse | null>(null)
+  const [teamSchedule, setTeamSchedule] = useState<TeamScheduleRow[]>([])
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -433,6 +448,7 @@ export function AdvisorCalendarPage() {
   const [bookingEnabled, setBookingEnabled] = useState(true)
   const [publicTimezone, setPublicTimezone] = useState("America/Toronto")
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart])
+  const teamHours = useMemo(() => Array.from({ length: 11 }, (_, index) => 8 * 60 + index * 60), [])
 
   const filteredTasks = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -476,7 +492,7 @@ export function AdvisorCalendarPage() {
     setIsLoading(true)
     setNotice(null)
     try {
-      const [tasksResponse, calendarEventsResponse, availabilityResponse, clientsResponse, advisorsResponse, profileResponse, meetingTypesResponse, exceptionsResponse, permissionsResponse, advisorProfileResponse] = await Promise.all([
+      const [tasksResponse, calendarEventsResponse, availabilityResponse, clientsResponse, advisorsResponse, profileResponse, meetingTypesResponse, exceptionsResponse, permissionsResponse, advisorProfileResponse, statsResponse] = await Promise.all([
         fetch("/api/calendar/intelligence?range=90", { cache: "no-store" }),
         fetch("/api/calendar/events", { cache: "no-store" }),
         fetch("/api/calendar/availability", { cache: "no-store" }),
@@ -487,8 +503,9 @@ export function AdvisorCalendarPage() {
         fetch("/api/calendar/exceptions", { cache: "no-store" }),
         fetch("/api/calendar/permissions", { cache: "no-store" }),
         fetch("/api/calendar/advisor-profile", { cache: "no-store" }),
+        fetch("/api/calendar/stats?days=30", { cache: "no-store" }),
       ])
-      const [nextTasks, nextCalendarEvents, nextAvailability, nextClients, nextAdvisors, nextProfile, nextMeetingTypes, nextExceptions, nextPermissions, nextAdvisorProfile] = await Promise.all([
+      const [nextTasks, nextCalendarEvents, nextAvailability, nextClients, nextAdvisors, nextProfile, nextMeetingTypes, nextExceptions, nextPermissions, nextAdvisorProfile, nextStats] = await Promise.all([
         readApiData<CalendarTask[]>(tasksResponse),
         readApiData<CalendarEventRecord[]>(calendarEventsResponse),
         readApiData<AvailabilitySlot[]>(availabilityResponse),
@@ -499,6 +516,7 @@ export function AdvisorCalendarPage() {
         readApiData<AvailabilityExceptionOption[]>(exceptionsResponse),
         readApiData<CalendarPermissionOption[]>(permissionsResponse),
         readApiData<AdvisorProfileOption>(advisorProfileResponse),
+        readApiData<CalendarStats>(statsResponse),
       ])
       setTasks([
         ...nextTasks.filter((task) => task.dueDate),
@@ -511,6 +529,7 @@ export function AdvisorCalendarPage() {
       setAvailabilityExceptions(nextExceptions)
       setCalendarPermissions(nextPermissions)
       setAdvisorProfile(nextAdvisorProfile)
+      setCalendarStats(nextStats)
       setCurrentUser(nextProfile)
       setPublicSlug(nextAdvisorProfile.publicSlug)
       setPublicName(nextAdvisorProfile.publicName)
@@ -536,6 +555,63 @@ export function AdvisorCalendarPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isEventDialogOpen) setEventDate(dateInputValue(selectedDay))
   }, [isEventDialogOpen, selectedDay])
+
+  useEffect(() => {
+    if (calendarView !== "TEAM") return
+    const controller = new AbortController()
+    const query = new URLSearchParams({
+      date: dateInputValue(selectedDay),
+      timezone: publicTimezone,
+    })
+    fetch(`/api/calendar/team-schedule?${query.toString()}`, { cache: "no-store", signal: controller.signal })
+      .then((response) => readApiData<{ rows: TeamScheduleRow[] }>(response))
+      .then((payload) => setTeamSchedule(payload.rows))
+      .catch((error) => {
+        if ((error as Error).name !== "AbortError") setNotice(error instanceof Error ? error.message : "Impossible de charger la vue équipe.")
+      })
+    return () => controller.abort()
+  }, [calendarView, publicTimezone, selectedDay])
+
+  async function findBestAdvisorForSelectedDay() {
+    setIsSaving(true)
+    setNotice(null)
+    try {
+      const response = await fetch("/api/calendar/routing/best-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingTypeId: meetingTypes[0]?.id,
+          date: selectedDay.toISOString(),
+          timezone: publicTimezone,
+        }),
+      })
+      const result = await readApiData<BestAdvisorResponse>(response)
+      setBestAdvisor(result)
+      setNotice(result.selected
+        ? `Meilleur conseiller : ${result.selected.advisorName}${result.selected.nextSlot ? ` à ${formatTime(new Date(result.selected.nextSlot))}` : ""}.`
+        : "Aucun conseiller disponible sur cette journée.")
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Impossible de trouver un conseiller disponible.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function auditCalendarIntegrations() {
+    setIsSaving(true)
+    setNotice(null)
+    try {
+      const response = await fetch("/api/calendar/integrations/audit", { cache: "no-store" })
+      const result = await readApiData<{ status: string; connections: unknown[]; busyRanges: unknown[] }>(response)
+      setNotice(result.status === "CONNECTED"
+        ? `Audit Google/Outlook OK : ${result.connections.length} connexion(s), ${result.busyRanges.length} indisponibilité(s) externe(s) lues.`
+        : "Audit Google/Outlook : aucune connexion active détectée pour ce conseiller.")
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Audit Google/Outlook impossible.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   function openCreateEventDialog(day: Date, startMinutes: number, advisorId?: string) {
     setEditingTaskId(null)
@@ -641,7 +717,10 @@ export function AdvisorCalendarPage() {
           locationType: meetingTypeLocation,
           isPublic: true,
           questionnaire: [
-            { key: "objectif", label: "Quel est votre objectif principal ?", type: "text" },
+            { key: "objectif", label: "Quel est votre objectif principal ?", type: "select", options: ["Préparer ma retraite", "Réduire ma fiscalité", "Protéger ma famille", "Faire le point"], required: true },
+            { key: "statut", label: "Votre statut", type: "select", options: ["Salarié", "Indépendant", "Dirigeant", "Retraité"] },
+            { key: "details", label: "Points à préparer avant le rendez-vous", type: "textarea" },
+            { key: "consentement_contact", label: "J’accepte d’être contacté au sujet de ma demande", type: "checkbox", required: true },
           ],
         }),
       })
@@ -1110,6 +1189,29 @@ export function AdvisorCalendarPage() {
           </div>
         ) : null}
 
+        <div className="mb-4 grid gap-3 md:grid-cols-4">
+          <div className="rounded-[1.25rem] border-2 border-slate-200 bg-white p-3 shadow-[0_4px_0_#e2e8f0]">
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.1em] text-slate-500"><BarChart3 className="size-4" />RDV confirmés</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{calendarStats?.totals.confirmed ?? 0}</p>
+          </div>
+          <div className="rounded-[1.25rem] border-2 border-slate-200 bg-white p-3 shadow-[0_4px_0_#e2e8f0]">
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Annulations</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{calendarStats?.totals.cancellationRate ?? 0}%</p>
+          </div>
+          <div className="rounded-[1.25rem] border-2 border-slate-200 bg-white p-3 shadow-[0_4px_0_#e2e8f0]">
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Préavis moyen</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{calendarStats?.totals.averageLeadTimeHours ?? 0} h</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void findBestAdvisorForSelectedDay()}
+            className="rounded-[1.25rem] border-2 border-emerald-200 bg-emerald-50 p-3 text-left shadow-[0_4px_0_#d9f99d]"
+          >
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.1em] text-emerald-700"><UsersRound className="size-4" />Meilleur conseiller</p>
+            <p className="mt-1 truncate text-sm font-black text-slate-950">{bestAdvisor?.selected?.advisorName ?? "Calculer"}</p>
+          </button>
+        </div>
+
         {isLoading ? (
           <div className="flex items-center gap-2 rounded-[1.5rem] border-2 border-slate-200 bg-slate-50 p-5 text-sm font-black text-slate-600">
             <Loader2 className="size-4 animate-spin text-emerald-600" />
@@ -1169,41 +1271,85 @@ export function AdvisorCalendarPage() {
                   />
                 </div>
               ) : (
-                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-                  {selectedDayByAdvisor.length === 0 ? (
-                    <div className="rounded-[1.25rem] border-2 border-dashed border-slate-200 bg-slate-50 p-5 text-sm font-semibold text-slate-600">
-                      Aucun conseiller trouvé pour cette vue équipe.
+                <div className="overflow-auto rounded-[1.25rem] border-2 border-slate-200 bg-white shadow-[0_4px_0_#e2e8f0]">
+                  <div
+                    className="min-w-[980px] grid"
+                    style={{ gridTemplateColumns: `88px repeat(${Math.max(teamSchedule.length || selectedDayByAdvisor.length, 1)}, minmax(180px, 1fr))` }}
+                  >
+                    <div className="sticky left-0 top-0 z-20 border-b-2 border-r-2 border-slate-200 bg-slate-50 p-3 text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+                      Heure
                     </div>
-                  ) : selectedDayByAdvisor.map(({ advisor, tasks: advisorTasks, slots }) => (
-                    <section key={advisor.id} className="rounded-[1.25rem] border-2 border-slate-200 bg-white p-4 shadow-[0_4px_0_#e2e8f0]">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-black text-slate-950">{advisor.name}</h3>
-                          <p className="mt-1 text-xs font-semibold text-slate-500">{advisor.title ?? advisor.email}</p>
+                    {(teamSchedule.length ? teamSchedule : selectedDayByAdvisor.map(({ advisor }) => ({
+                      advisor: { id: advisor.id, name: advisor.name, email: advisor.email, title: advisor.title },
+                      busy: [],
+                    }))).map((row) => (
+                      <div key={row.advisor.id} className="sticky top-0 z-10 border-b-2 border-r-2 border-slate-200 bg-slate-50 p-3">
+                        <p className="truncate text-sm font-black text-slate-950">{row.advisor.name}</p>
+                        <p className="truncate text-xs font-semibold text-slate-500">{row.advisor.title ?? row.advisor.email}</p>
+                      </div>
+                    ))}
+                    {teamHours.map((hour) => (
+                      <div key={hour} className="contents">
+                        <div className="sticky left-0 z-10 border-b border-r-2 border-slate-200 bg-white p-3 text-xs font-black text-slate-500">
+                          {minutesLabel(hour)}
                         </div>
-                        <StatusBadge tone={advisorTasks.length >= 6 ? "rose" : advisorTasks.length >= 3 ? "amber" : "emerald"}>
-                          {advisorTasks.length >= 6 ? "Chargé" : advisorTasks.length >= 3 ? "Actif" : "Disponible"}
-                        </StatusBadge>
+                        {(teamSchedule.length ? teamSchedule : selectedDayByAdvisor.map(({ advisor }) => ({
+                          advisor: { id: advisor.id, name: advisor.name, email: advisor.email, title: advisor.title },
+                          busy: [],
+                        }))).map((row) => {
+                          const cellStart = setTime(selectedDay, hour)
+                          const cellEnd = setTime(selectedDay, hour + 60)
+                          const busyItems = row.busy.filter((item) => {
+                            const start = new Date(item.start)
+                            const end = new Date(item.end)
+                            return start < cellEnd && end > cellStart
+                          })
+                          const localTasks = selectedDayByAdvisor.find((item) => item.advisor.id === row.advisor.id)?.tasks.filter((task) => {
+                            if (!task.dueDate) return false
+                            const start = new Date(task.dueDate)
+                            const end = eventEndDate(task)
+                            return start < cellEnd && end > cellStart
+                          }) ?? []
+                          const items = busyItems.length ? busyItems : localTasks.map((task) => ({
+                            id: task.id,
+                            title: task.title,
+                            start: task.dueDate as string,
+                            end: eventEndDate(task).toISOString(),
+                            source: task.sourceLabel ?? "INTERNAL",
+                          }))
+                          return (
+                            <div key={`${row.advisor.id}-${hour}`} className="min-h-24 border-b border-r border-slate-100 bg-white p-2">
+                              {items.length ? items.map((item) => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const task = localTasks.find((candidate) => candidate.id === item.id)
+                                    if (task) openEditEventDialog(task)
+                                  }}
+                                  className={item.source === "GOOGLE_CALENDAR" || item.source === "OUTLOOK_CALENDAR"
+                                    ? "mb-1 block w-full rounded-xl border-2 border-sky-200 bg-sky-50 px-2 py-1 text-left text-[11px] font-black text-sky-800"
+                                    : item.source === "HOLD"
+                                      ? "mb-1 block w-full rounded-xl border-2 border-amber-200 bg-amber-50 px-2 py-1 text-left text-[11px] font-black text-amber-800"
+                                      : "mb-1 block w-full rounded-xl border-2 border-emerald-200 bg-emerald-50 px-2 py-1 text-left text-[11px] font-black text-emerald-800"}
+                                >
+                                  {formatTime(new Date(item.start))} · {item.title}
+                                </button>
+                              )) : (
+                                <button
+                                  type="button"
+                                  onClick={() => openCreateEventDialog(selectedDay, hour, row.advisor.id)}
+                                  className="h-full min-h-16 w-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-xs font-black text-slate-400 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                >
+                                  Libre
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {slots.length ? slots.map((slot) => (
-                          <span key={slotKey(slot)} className="rounded-full bg-lime-50 px-3 py-1 text-xs font-black text-emerald-800 ring-2 ring-emerald-100">
-                            {minutesLabel(slot.startMinutes)} - {minutesLabel(slot.endMinutes)}
-                          </span>
-                        )) : <span className="text-xs font-semibold text-slate-500">Aucune disponibilité publiée ce jour.</span>}
-                      </div>
-                      <div className="mt-4 space-y-2">
-                        {advisorTasks.length ? advisorTasks.map((task) => (
-                          <button key={task.id} type="button" onClick={() => openEditEventDialog(task)} className={`block w-full rounded-2xl border-2 p-3 text-left ${taskTone(task)}`}>
-                            <p className="text-xs font-black">{formatTime(new Date(task.dueDate as string))} · {taskTypeLabel(task.type)}</p>
-                            <p className="mt-1 line-clamp-2 text-sm font-black">{task.title}</p>
-                          </button>
-                        )) : (
-                          <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 text-xs font-semibold text-slate-500">Libre sur le calendrier interne.</div>
-                        )}
-                      </div>
-                    </section>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1362,8 +1508,12 @@ export function AdvisorCalendarPage() {
                 <ExternalLink className="size-4" />
                 Connecter Outlook Calendar
               </Button>
+              <Button type="button" variant="outline" onClick={() => void auditCalendarIntegrations()} disabled={isSaving}>
+                <Bot className="size-4" />
+                Auditer la synchro
+              </Button>
               <p className="text-xs font-semibold text-slate-600">
-                Les créneaux Google / Outlook connectés sont lus comme indisponibles dans la réservation publique.
+                Les créneaux Google / Outlook connectés sont lus comme indisponibles dans la réservation publique et la vue équipe.
               </p>
             </div>
 

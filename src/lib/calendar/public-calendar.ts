@@ -27,7 +27,7 @@ export type BookingService = {
   maxBookingsPerDay?: number | null
   locationType?: string | null
   description: string
-  questionnaire?: Array<{ key: string; label: string; type: "text" | "select"; options?: string[] }> | null
+  questionnaire?: Array<{ key: string; label: string; type: "text" | "textarea" | "select" | "checkbox"; options?: string[]; required?: boolean }> | null
 }
 
 export type PublicCalendarData = {
@@ -54,8 +54,9 @@ export type PublicCalendarData = {
 type PublicQuestion = {
   key: string
   label: string
-  type: "text" | "select"
+  type: "text" | "textarea" | "select" | "checkbox"
   options?: string[]
+  required?: boolean
 }
 
 function normalizeQuestionnaire(value: unknown): PublicQuestion[] | null {
@@ -64,9 +65,9 @@ function normalizeQuestionnaire(value: unknown): PublicQuestion[] | null {
     if (!item || typeof item !== "object") return []
     const question = item as Record<string, unknown>
     if (typeof question.key !== "string" || typeof question.label !== "string") return []
-    const type = question.type === "select" ? "select" : "text"
+    const type = question.type === "select" || question.type === "textarea" || question.type === "checkbox" ? question.type : "text"
     const options = Array.isArray(question.options) ? question.options.filter((option): option is string => typeof option === "string") : undefined
-    return [{ key: question.key, label: question.label, type, options }]
+    return [{ key: question.key, label: question.label, type, options, required: question.required === true }]
   })
 }
 

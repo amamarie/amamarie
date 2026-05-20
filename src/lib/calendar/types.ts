@@ -14,6 +14,9 @@ export const defaultMeetingTypes = [
     questionnaire: [
       { key: "main_goal", label: "Quel est votre objectif principal ?", type: "select", options: ["Préparer ma retraite", "Réduire ma fiscalité", "Protéger ma famille", "Faire le point"] },
       { key: "status", label: "Votre statut", type: "select", options: ["Salarié", "Indépendant", "Dirigeant", "Retraité"] },
+      { key: "existing_solution", label: "Avez-vous déjà une solution en place ?", type: "select", options: ["Oui", "Non", "Je ne sais pas"] },
+      { key: "details", label: "Ajoutez les points que vous souhaitez préparer", type: "textarea" },
+      { key: "contact_consent", label: "J’accepte d’être contacté au sujet de ma demande", type: "checkbox", required: true },
     ],
     createsOpportunity: true,
     campaignKey: "retirement",
@@ -32,6 +35,7 @@ export const defaultMeetingTypes = [
     isPublic: true,
     questionnaire: [
       { key: "need", label: "Quel sujet souhaitez-vous aborder ?", type: "text" },
+      { key: "urgency", label: "Niveau d’urgence", type: "select", options: ["Cette semaine", "Ce mois-ci", "Simple information"] },
     ],
     createsOpportunity: false,
     campaignKey: null,
@@ -50,6 +54,8 @@ export const defaultMeetingTypes = [
     isPublic: true,
     questionnaire: [
       { key: "product", label: "Produit concerné", type: "select", options: ["Assurance-vie", "Prévoyance", "Santé", "Emprunteur", "Autre"] },
+      { key: "current_contract", label: "Avez-vous un contrat actuel à comparer ?", type: "select", options: ["Oui", "Non", "Je ne sais pas"] },
+      { key: "coverage_goal", label: "Besoin principal", type: "textarea" },
     ],
     createsOpportunity: true,
     campaignKey: "insurance",
@@ -68,6 +74,7 @@ export const defaultMeetingTypes = [
     isPublic: true,
     questionnaire: [
       { key: "contract", label: "Contrat ou dossier concerné", type: "text" },
+      { key: "documents_ready", label: "J’ai mes documents prêts pour la rencontre", type: "checkbox" },
     ],
     createsOpportunity: false,
     campaignKey: null,
