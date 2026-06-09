@@ -79,4 +79,5 @@ jobs:
           name: finassuro-backups-${{ env.BACKUP_DATE }}
           path: .backup/*.gpg
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 30
