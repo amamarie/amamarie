@@ -10,6 +10,21 @@ Il fait trois operations:
 
 Les fichiers sensibles sont chiffres avec `BACKUP_GPG_PUBLIC_KEY` avant d'etre conserves comme artefacts GitHub Actions ou envoyes vers S3.
 
+## Retention
+
+Les artefacts GitHub Actions sont supprimes automatiquement apres 30 jours par defaut.
+
+Les tags Git `backup/finassuro-YYYY-MM-DD` sont supprimes automatiquement apres 90 jours par defaut.
+
+Ces valeurs peuvent etre changees avec des variables GitHub:
+
+```env
+BACKUP_ARTIFACT_RETENTION_DAYS="30"
+BACKUP_TAG_RETENTION_DAYS="90"
+```
+
+La purge automatique ne supprime que les tags qui respectent le format `backup/finassuro-YYYY-MM-DD`.
+
 ## Secrets GitHub a configurer
 
 Obligatoire pour chiffrer les sauvegardes sensibles:
@@ -45,6 +60,8 @@ Variable GitHub optionnelle:
 
 ```env
 BACKUP_S3_PREFIX="finassuro"
+BACKUP_ARTIFACT_RETENTION_DAYS="30"
+BACKUP_TAG_RETENTION_DAYS="90"
 ```
 
 ## Cle GPG
