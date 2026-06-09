@@ -21,6 +21,7 @@ jobs:
       HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' && 'true' || 'false' }}
       HAS_AWS_CREDENTIALS: ${{ secrets.BACKUP_S3_BUCKET != '' && secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && 'true' || 'false' }}
       VERCEL_ENVIRONMENT: production
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -34,8 +35,13 @@ jobs:
       - name: Install backup tools
         if: ${{ env.HAS_DATABASE_URL == 'true' || env.HAS_VERCEL_TOKEN == 'true' }}
         run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install -y postgresql-client gnupg
+          sudo apt-get install -y postgresql-client-17 gnupg
 
       - name: Configure AWS credentials
         if: ${{ env.HAS_AWS_CREDENTIALS == 'true' }}
