@@ -1,0 +1,74 @@
+name: Weekly FinAssuro backup
+
+on:
+  schedule:
+    - cron: "0 8 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    name: Code, database, and Vercel env backup
+    runs-on: ubuntu-latest
+    env:
+      BACKUP_DIR: .backup
+      BACKUP_TAG_PREFIX: backup/finassuro
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_PREFIX: ${{ vars.BACKUP_S3_PREFIX || 'finassuro' }}
+      HAS_DATABASE_URL: ${{ secrets.DATABASE_URL != '' && 'true' || 'false' }}
+      HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' && 'true' || 'false' }}
+      HAS_AWS_CREDENTIALS: ${{ secrets.BACKUP_S3_BUCKET != '' && secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' && 'true' || 'false' }}
+      VERCEL_ENVIRONMENT: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set backup date
+        run: echo "BACKUP_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
+
+      - name: Install backup tools
+        if: ${{ env.HAS_DATABASE_URL == 'true' || env.HAS_VERCEL_TOKEN == 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client gnupg
+
+      - name: Configure AWS credentials
+        if: ${{ env.HAS_AWS_CREDENTIALS == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ca-central-1' }}
+
+      - name: Create weekly code backup tag
+        run: bash scripts/backups/create-code-backup-tag.sh
+
+      - name: Backup PostgreSQL database
+        if: ${{ env.HAS_DATABASE_URL == 'true' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_GPG_PUBLIC_KEY: ${{ secrets.BACKUP_GPG_PUBLIC_KEY }}
+        run: bash scripts/backups/backup-postgres.sh
+
+      - name: Backup Vercel production environment variables
+        if: ${{ env.HAS_VERCEL_TOKEN == 'true' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          BACKUP_GPG_PUBLIC_KEY: ${{ secrets.BACKUP_GPG_PUBLIC_KEY }}
+        run: bash scripts/backups/export-vercel-env.sh
+
+      - name: Upload encrypted backup artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finassuro-backups-${{ env.BACKUP_DATE }}
+          path: .backup/*.gpg
+          if-no-files-found: ignore
+          retention-days: 30
